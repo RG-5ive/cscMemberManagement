@@ -1,0 +1,317 @@
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { apiRequest } from "@/lib/queryClient";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Workshop } from "@shared/schema";
+
+// Schema for workshop editing
+const editWorkshopSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  date: z.date(),
+  time: z.string().min(1, "Time is required"),
+  location: z.string().min(1, "Location is required"),
+  capacity: z.coerce.number().int().min(1, "Capacity must be at least 1"),
+});
+
+type EditWorkshopFormValues = z.infer<typeof editWorkshopSchema>;
+
+interface EditWorkshopDialogProps {
+  workshop: Workshop | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onWorkshopUpdated: () => void;
+}
+
+export default function EditWorkshopDialog({
+  workshop,
+  open,
+  onOpenChange,
+  onWorkshopUpdated,
+}: EditWorkshopDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form definition
+  const form = useForm<EditWorkshopFormValues>({
+    resolver: zodResolver(editWorkshopSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      date: new Date(),
+      time: "",
+      location: "",
+      capacity: 20,
+    },
+  });
+
+  // Update form when workshop changes
+  useEffect(() => {
+    if (workshop) {
+      const workshopDate = new Date(workshop.date);
+      const timeString = format(workshopDate, "HH:mm");
+      
+      form.reset({
+        title: workshop.title,
+        description: workshop.description,
+        date: workshopDate,
+        time: timeString,
+        location: workshop.location_address || "",
+        capacity: workshop.capacity,
+      });
+    }
+  }, [workshop, form]);
+
+  // Update workshop mutation
+  const updateWorkshopMutation = useMutation({
+    mutationFn: async (values: EditWorkshopFormValues) => {
+      if (!workshop) throw new Error("No workshop to update");
+      
+      // Combine date and time
+      const [hours, minutes] = values.time.split(':').map(Number);
+      const combinedDateTime = new Date(values.date);
+      combinedDateTime.setHours(hours, minutes, 0, 0);
+
+      const updateData = {
+        title: values.title,
+        description: values.description,
+        date: combinedDateTime.toISOString(),
+        location_address: values.location,
+        capacity: values.capacity,
+      };
+
+      const response = await apiRequest("PATCH", `/api/workshops/${workshop.id}`, updateData);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update workshop");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Workshop Updated",
+        description: "The workshop has been successfully updated.",
+      });
+      
+      // Invalidate and refetch workshops
+      queryClient.invalidateQueries({ queryKey: ["/api/workshops"] });
+      
+      onWorkshopUpdated();
+      onOpenChange(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update workshop",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
+    },
+  });
+
+  const onSubmit = async (values: EditWorkshopFormValues) => {
+    setIsSubmitting(true);
+    updateWorkshopMutation.mutate(values);
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    form.reset();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Workshop</DialogTitle>
+          <DialogDescription>
+            Update the workshop details. You can modify any field including past workshops.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Workshop Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter workshop title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe what this workshop covers..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={false}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Select the start time for the workshop
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter workshop location" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="capacity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Capacity</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter maximum participants"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Maximum number of participants who can register
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Workshop"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,0 +1,547 @@
+import { useAuth } from "@/hooks/use-auth";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useEffect, useState } from "react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DemographicChangeRequestForm } from "@/components/profile/demographic-change-request-form";
+
+const MEMBER_LEVELS = ["Affiliate", "Associate", "Companion", "Full Life", "Full", "Student"];
+const GENDERS = ["Female", "Male", "Non-Binary", ""];
+const ETHNICITIES = [
+  "Black (e.g., African, Afro-Caribbean, Afro-Canadian)",
+  "East Asian (e.g., China, South Korea, Japan, Taiwan)",
+  "Indigenous (e.g., First Nations, Métis, Inuit)",
+  "Latino/Latina/Latinx (Latin American)",
+  "South Asian (e.g., India, Bangladesh, Sri Lanka)",
+  "Southeast Asian (e.g., Indonesia, Philippines, Vietnam)"
+];
+
+const LOCATIONS = [
+  "Alberta", "British Columbia", "Manitoba", "New Brunswick", 
+  "Newfoundland and Labrador", "Northwest Territories", "Nova Scotia", 
+  "Nunavut", "Ontario", "Prince Edward Island", "Quebec", 
+  "Saskatchewan", "Yukon", "International"
+];
+
+// Contact information form schema
+const contactFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Please enter a valid email address"),
+  phoneNumber: z.string().optional(),
+  alternateEmail: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+});
+
+type ContactFormValues = z.infer<typeof contactFormSchema>;
+
+export default function Profile() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
+  // Demographic form
+  const demographicForm = useForm({
+    defaultValues: {
+      memberLevel: user?.memberLevel || "",
+      gender: user?.gender || "",
+      lgbtq2Status: user?.lgbtq2Status || "",
+      bipocStatus: user?.bipocStatus || "",
+      ethnicity: user?.ethnicity || [],
+      location: user?.location || "",
+      languages: user?.languages?.join(", ") || "",
+    },
+  });
+
+  // Contact form
+  const contactForm = useForm<ContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phoneNumber: user?.phoneNumber || "",
+      alternateEmail: user?.alternateEmail || "",
+      emergencyContact: user?.emergencyContact || "",
+      emergencyPhone: user?.emergencyPhone || "",
+    },
+  });
+
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      demographicForm.reset({
+        memberLevel: user.memberLevel || "",
+        gender: user.gender || "",
+        lgbtq2Status: user.lgbtq2Status || "",
+        bipocStatus: user.bipocStatus || "",
+        ethnicity: user.ethnicity || [],
+        location: user.location || "",
+        languages: user.languages?.join(", ") || "",
+      });
+
+      contactForm.reset({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+        alternateEmail: user.alternateEmail || "",
+        emergencyContact: user.emergencyContact || "",
+        emergencyPhone: user.emergencyPhone || "",
+      });
+    }
+  }, [user, demographicForm, contactForm]);
+
+  async function onDemographicSubmit(data: any) {
+    setIsUpdating(true);
+    try {
+      await apiRequest("PATCH", `/api/user/${user?.id}`, data);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Profile Updated",
+        description: "Your demographic information has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function onContactSubmit(data: ContactFormValues) {
+    setIsUpdating(true);
+    try {
+      // Check if email was changed
+      const emailChanged = user?.email !== data.email;
+      
+      // If email changed, we'll need verification
+      if (emailChanged) {
+        setNeedsVerification(true);
+        const response = await apiRequest("POST", "/api/user/email-change-request", {
+          userId: user?.id,
+          newEmail: data.email
+        });
+        
+        if (response.ok) {
+          setVerificationSent(true);
+          toast({
+            title: "Verification Email Sent",
+            description: "Please check your new email address for a verification link.",
+          });
+        }
+        
+        // Update other contact info except email
+        const { email, ...otherData } = data;
+        await apiRequest("PATCH", `/api/user/${user?.id}`, otherData);
+      } else {
+        // If email wasn't changed, update all contact info
+        await apiRequest("PATCH", `/api/user/${user?.id}`, data);
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        toast({
+          title: "Contact Information Updated",
+          description: "Your contact information has been successfully updated.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+  
+  async function resendVerification() {
+    try {
+      await apiRequest("POST", "/api/user/resend-verification", {
+        userId: user?.id
+      });
+      toast({
+        title: "Verification Email Resent",
+        description: "A new verification email has been sent to your new email address.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to Resend",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="container mx-auto py-3 sm:py-6 px-2 sm:px-4 lg:px-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6">My Profile</h1>
+        
+        <Tabs defaultValue="contact" className="w-full">
+          <TabsList className="mb-4 sm:mb-6 grid w-full grid-cols-2">
+            <TabsTrigger value="contact" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Contact Information</span>
+              <span className="sm:hidden">Contact</span>
+            </TabsTrigger>
+            <TabsTrigger value="demographics" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Demographics</span>
+              <span className="sm:hidden">Demographics</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Contact Information Tab */}
+          <TabsContent value="contact">
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Information</CardTitle>
+                <CardDescription>
+                  Update your contact details. Changing your email will require verification.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {needsVerification && verificationSent && (
+                  <div className="mb-6 p-4 border rounded-md bg-yellow-50 border-yellow-200 text-yellow-800">
+                    <h3 className="font-medium mb-2">Email Verification Required</h3>
+                    <p className="text-sm mb-3">
+                      We've sent a verification link to your new email address. Please verify it to complete the email update.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={resendVerification}
+                    >
+                      Resend Verification Email
+                    </Button>
+                  </div>
+                )}
+                
+                <Form {...contactForm}>
+                  <form onSubmit={contactForm.handleSubmit(onContactSubmit)} className="space-y-6">
+                    {/* Name fields */}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={contactForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={contactForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={contactForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Email Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="email" />
+                          </FormControl>
+                          <FormDescription>
+                            This is your main contact email. Changing this will require verification.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={contactForm.control}
+                      name="alternateEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alternative Email (Optional)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={contactForm.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="tel" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="border-t pt-5 mt-6">
+                      <h3 className="text-lg font-medium mb-4">Emergency Contact Information</h3>
+                      
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={contactForm.control}
+                          name="emergencyContact"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={contactForm.control}
+                          name="emergencyPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="tel" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="mt-4 w-full sm:w-auto"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 
+                        <><LoadingSpinner size="sm" className="mr-2" /> Updating...</> : 
+                        "Update Contact Information"
+                      }
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Demographics Tab */}
+          <TabsContent value="demographics">
+            <DemographicChangeRequestForm />
+                  <form onSubmit={demographicForm.handleSubmit(onDemographicSubmit)} className="space-y-6">
+                    <FormField
+                      control={demographicForm.control}
+                      name="memberLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Member Level</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select member level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MEMBER_LEVELS.map((level) => (
+                                <SelectItem key={level} value={level}>
+                                  {level}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {GENDERS.map((gender) => (
+                                <SelectItem key={gender} value={gender}>
+                                  {gender || "Prefer not to answer"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="lgbtq2Status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>LGBTQ2+ Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select LGBTQ2+ status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">Prefer not to answer</SelectItem>
+                              <SelectItem value="Yes">Yes</SelectItem>
+                              <SelectItem value="No">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="bipocStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>BIPOC Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select BIPOC status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">Prefer not to answer</SelectItem>
+                              <SelectItem value="Yes">Yes</SelectItem>
+                              <SelectItem value="No">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="ethnicity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ethnicity (Select all that apply)</FormLabel>
+                          <div className="grid gap-2">
+                            {ETHNICITIES.map((ethnicity) => (
+                              <div key={ethnicity} className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={Array.isArray(field.value) && field.value.includes(ethnicity)}
+                                  onCheckedChange={(checked) => {
+                                    const currentValues = Array.isArray(field.value) ? field.value : [];
+                                    const newValue = checked
+                                      ? [...currentValues, ethnicity]
+                                      : currentValues.filter((e: string) => e !== ethnicity);
+                                    field.onChange(newValue);
+                                  }}
+                                />
+                                <label className="text-sm">{ethnicity}</label>
+                              </div>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Geographic Location</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {LOCATIONS.map((location) => (
+                                <SelectItem key={location} value={location}>
+                                  {location}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={demographicForm.control}
+                      name="languages"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Languages Spoken (comma-separated)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="English, French, ..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 
+                        <><LoadingSpinner size="sm" className="mr-2" /> Updating...</> : 
+                        "Update Demographics"
+                      }
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}

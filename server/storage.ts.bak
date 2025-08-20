@@ -1,0 +1,252 @@
+import { 
+  User, InsertUser, Message, Survey, SurveyResponse, 
+  Workshop, WorkshopRegistration, VerificationCode, InsertVerificationCode, Member,
+  users, messages, surveys, surveyResponses, workshops, workshopRegistrations, verificationCodes,
+  members
+} from '@shared/schema';
+import { db } from './db';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import session from 'express-session';
+import connectPg from 'connect-pg-simple';
+import { pool } from './db';
+
+// Re-export the interface type from memory-storage for compatibility
+export type { IStorage } from './memory-storage';
+import { IStorage } from './memory-storage';
+
+// PostgreSQL session store
+const PostgresSessionStore = connectPg(session);
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+  
+  constructor() {
+    // Initialize PostgreSQL session store
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+    console.log("PostgreSQL session store initialized");
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const [user] = await db.update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  // Message operations
+  async createMessage(message: Omit<Message, "id" | "createdAt">): Promise<Message> {
+    const [newMessage] = await db.insert(messages)
+      .values({
+        ...message,
+        createdAt: new Date()
+      })
+      .returning();
+    return newMessage;
+  }
+
+  async getMessagesByUser(userId: number): Promise<Message[]> {
+    return await db.select()
+      .from(messages)
+      .where(eq(messages.toUserId, userId)) // Using toUserId as per the schema
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async markMessageAsRead(messageId: number): Promise<void> {
+    await db.update(messages)
+      .set({ read: true })
+      .where(eq(messages.id, messageId));
+  }
+
+  // Survey operations
+  async createSurvey(survey: Omit<Survey, "id" | "createdAt">): Promise<Survey> {
+    const [newSurvey] = await db.insert(surveys)
+      .values({
+        ...survey,
+        createdAt: new Date()
+      })
+      .returning();
+    return newSurvey;
+  }
+
+  async getSurvey(id: number): Promise<Survey | undefined> {
+    const [survey] = await db.select().from(surveys).where(eq(surveys.id, id));
+    return survey;
+  }
+
+  async getSurveys(): Promise<Survey[]> {
+    return await db.select().from(surveys);
+  }
+
+  // Survey response operations
+  async createSurveyResponse(response: Omit<SurveyResponse, "id" | "submittedAt">): Promise<SurveyResponse> {
+    const [newResponse] = await db.insert(surveyResponses)
+      .values({
+        ...response,
+        submittedAt: new Date()
+      })
+      .returning();
+    return newResponse;
+  }
+
+  async getSurveyResponses(surveyId: number): Promise<SurveyResponse[]> {
+    return await db.select()
+      .from(surveyResponses)
+      .where(eq(surveyResponses.surveyId, surveyId));
+  }
+
+  // Workshop operations
+  async createWorkshop(workshop: Omit<Workshop, "id">): Promise<Workshop> {
+    const [newWorkshop] = await db.insert(workshops)
+      .values(workshop)
+      .returning();
+    return newWorkshop;
+  }
+
+  async getWorkshops(): Promise<Workshop[]> {
+    return await db.select().from(workshops);
+  }
+
+  // Workshop registration operations
+  async registerForWorkshop(registration: Omit<WorkshopRegistration, "id" | "registeredAt">): Promise<WorkshopRegistration> {
+    const [newRegistration] = await db.insert(workshopRegistrations)
+      .values({
+        ...registration,
+        registeredAt: new Date()
+      })
+      .returning();
+    return newRegistration;
+  }
+
+  // Verification code operations
+  async createVerificationCode(data: InsertVerificationCode): Promise<VerificationCode> {
+    const [newCode] = await db.insert(verificationCodes)
+      .values({
+        ...data,
+        createdAt: new Date(),
+        verified: false
+      })
+      .returning();
+    return newCode;
+  }
+
+  async getVerificationCode(email: string, code: string): Promise<VerificationCode | undefined> {
+    const [verificationCode] = await db.select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.email, email),
+          eq(verificationCodes.code, code)
+        )
+      );
+    return verificationCode;
+  }
+
+  async verifyCode(id: number): Promise<VerificationCode> {
+    const [updatedCode] = await db.update(verificationCodes)
+      .set({ verified: true })
+      .where(eq(verificationCodes.id, id))
+      .returning();
+    return updatedCode;
+  }
+  
+  async getPendingVerifications(email: string): Promise<VerificationCode[]> {
+    try {
+      // Get all unverified codes for this email that haven't expired
+      const now = new Date();
+      const verifications = await db
+        .select()
+        .from(verificationCodes)
+        .where(
+          and(
+            eq(verificationCodes.email, email),
+            eq(verificationCodes.verified, false),
+            sql`${verificationCodes.expiresAt} > NOW()`
+          )
+        )
+        .orderBy(desc(verificationCodes.createdAt));
+      
+      return verifications;
+    } catch (error) {
+      console.error("Error getting pending verifications:", error);
+      return [];
+    }
+  }
+
+  // Member verification operations (simulating check against a member database)
+  async checkMemberExists(email: string, firstName: string, lastName: string): Promise<boolean> {
+    // Query the members table to check if the member exists
+    const foundMembers = await db.select()
+      .from(members)
+      .where(
+        and(
+          eq(members.email, email),
+          eq(members.firstName, firstName),
+          eq(members.lastName, lastName)
+        )
+      );
+    
+    return foundMembers.length > 0;
+  }
+  
+  async getMemberData(email: string, firstName: string, lastName: string): Promise<{ memberLevel: string | null } | null> {
+    // Query the members table to get member data including their level
+    const foundMember = await db.select()
+      .from(members)
+      .where(
+        and(
+          eq(members.email, email),
+          eq(members.firstName, firstName),
+          eq(members.lastName, lastName)
+        )
+      )
+      .limit(1);
+    
+    if (foundMember.length === 0) {
+      return null;
+    }
+    
+    // Map the category field from members table to the memberLevel format in users table
+    const categoryToLevelMap: Record<string, string> = {
+      "AFFILIATE": "Affiliate",
+      "ASSOCIATE": "Associate",
+      "COMPANION": "Companion",
+      "FULL LIFE": "Full Life",
+      "FULL": "Full",
+      "STUDENT": "Student"
+    };
+    
+    // Get the category and map it to a memberLevel, or null if not mappable
+    const category = foundMember[0].category || '';
+    const memberLevel = categoryToLevelMap[category.toUpperCase()] || null;
+    
+    return { memberLevel };
+  }
+}
+
+// Export a DatabaseStorage instance
+export const storage = new DatabaseStorage();

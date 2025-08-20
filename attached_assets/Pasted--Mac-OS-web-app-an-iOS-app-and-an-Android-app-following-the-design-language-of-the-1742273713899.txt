@@ -1,0 +1,135 @@
+**Mac OS web app**, an **iOS app**, and an **Android app**, following the **design language** of the CSC website ([https://csc.ca](https://csc.ca)). The app will provide distinct functionalities for **users** and **administrators**.
+
+## **Core Features**
+
+### **User Authentication & Registration**
+
+- The app will **automatically retrieve** member data from the CSC website ([https://csc.ca/members/](https://csc.ca/members/)).
+- Users will be authenticated via **email verification**.
+- If no email is found, users will be prompted to enter one for registration.
+- The system will automatically generate a **passcode** for the user.
+- Users can **customize** their username and password (8-character alphanumeric + special character).
+- Users can update their **email** after registration.
+
+### **User Profile & Data Collection**
+
+Upon registration, users will complete a survey collecting the following details:
+
+- **Name**
+- **Member Level**: Affiliate, Associate, Companion, Full Life, Full, Student
+- **Gender**: Blank (Prefer not to answer), Female, Male, Non-Binary
+- **LGBTQ2+ Status**: Blank, No, Yes
+- **BIPOC Status**: Blank, Yes, No
+- **Ethnicity**: (Multiple selectable options)
+  - Black (e.g., African, Afro-Caribbean, Afro-Canadian)
+  - East Asian (e.g., China, South Korea, Japan, Taiwan)
+  - Indigenous (e.g., First Nations, Métis, Inuit)
+  - Latino/Latina/Latinx (Latin American)
+  - South Asian (e.g., India, Bangladesh, Sri Lanka)
+  - Southeast Asian (e.g., Indonesia, Philippines, Vietnam)
+- **Geographic Location**: Selectable options for all Canadian provinces & territories + International
+- **Languages Spoken**: Users can enter multiple languages
+
+### **User Features**
+
+- **Private Messaging**: Admins can communicate with users **individually** or **in groups**.
+- **Survey Distribution & Data Collection**
+- **Geolocation Tracking**:
+  - Track users' **location** via **GPS, Bluetooth, Wi-Fi, and cellular data**.
+- **E-Commerce Integration**:
+  - **Purchase** items from the CSC web store.
+  - **Register & Pay** for workshops.
+  - **Pay Membership Fees** via the app.
+- **Push Notifications**:
+  - Admins can send **news updates** and **important notifications**.
+  - Notifications can include **external links**.
+
+---
+
+## **Administrator & Web App Features**
+
+### **Web App as a Data Hub**
+
+- Aggregates data from **iOS and Android apps**.
+- Provides **differentiated access levels** to various committees and administrators.
+
+### **Access Levels**
+
+#### **1. Master Key (Super Admin)**
+
+- **Full Access** to all data and system functions.
+- Can **modify** permissions for all users and administrators.
+
+#### **2. General Admin**
+
+- **Access to all data** except **ethnicity-related information**.
+- Can send **push messages** to members.
+- Can **organize elections** and collect **voting data** from mobile apps.
+- Voting results will include representation for:
+  - At least **one Anglophone fully accredited CSC member**
+  - At least **one Francophone fully accredited CSC member**
+  - At least **one male fully accredited CSC member**
+  - At least **one female fully accredited CSC member**
+  - At least **one voting-sanctioned CSC member under 50**
+  - At least **one individual experienced in financial structures**
+  - At least **two Directors from the current Board**
+
+#### **3. Education Committee**
+
+- Can push **workshop information** to the mobile apps.
+
+#### **4. Diversity Committee**
+
+- **Access to ethnicity-related data**.
+- Can retrieve **contact information** of members.
+
+#### **5. Members Engagement Committee**
+
+- Access to **members' location data** and **contact information**.
+- Can send **messages** to members via the app.
+
+---
+
+## **Flowcharts**
+
+### **User Registration & Authentication Flow**
+
+```plaintext
+1. User enters email
+2. System checks for existing email in CSC database
+   - YES: Auto-generate passcode & send to user
+   - NO: Prompt for manual email entry, then generate passcode
+3. User logs in and sets custom username/password
+4. User completes demographic survey
+5. Access granted to app features based on membership level
+```
+
+### **Admin Communication Flow**
+
+```plaintext
+1. Admin logs into web app
+2. Selects individual user or group
+3. Composes message (text, survey, event invite, news update, etc.)
+4. Sends message via push notification
+5. Users receive notification & interact accordingly
+```
+
+### **Voting & Election Flow**
+
+```plaintext
+1. Admin creates election in web app
+2. Members receive push notifications to vote via the mobile app
+3. Votes collected and aggregated by web app
+4. Web app ensures representation of required demographics
+5. Results displayed in the web app dashboard
+```
+
+---
+
+## **Security Considerations**
+
+- **End-to-end encryption** for messages and voting data.
+- **Two-factor authentication (2FA)** for administrators.
+- **Role-based access control** to restrict data visibility.
+- **Regular data backups** to prevent loss.
+- **GDPR & Canadian privacy law compliance** for user data.
