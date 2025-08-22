@@ -57,6 +57,17 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
+    # Grant permissions for GitHub Pages deployment
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    # Deploy to GitHub Pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -69,7 +80,7 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Build application
+    - name: Build application for GitHub Pages
       env:
         ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
         ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
@@ -80,43 +91,44 @@ jobs:
         GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
         SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        NODE_ENV: production
       run: |
+        # Build frontend only (GitHub Pages is static hosting)
         npm run build
-        npm run db:push
-
-    # Deploy to your hosting provider (uncomment and configure based on your needs)
+        
+        # Prepare static files for GitHub Pages
+        mkdir -p pages-dist
+        
+        # Copy client build files
+        if [ -d "client/dist" ]; then
+          cp -r client/dist/* pages-dist/
+        elif [ -d "dist" ]; then
+          cp -r dist/* pages-dist/
+        else
+          echo "Warning: No dist folder found"
+        fi
+        
+        # Create SPA fallback for client-side routing
+        if [ -f "pages-dist/index.html" ]; then
+          cp pages-dist/index.html pages-dist/404.html
+        fi
+        
+        echo "✅ Static build prepared for GitHub Pages"
     
-    # Example: Deploy to Heroku
-    # - name: Deploy to Heroku
-    #   uses: akhileshns/heroku-deploy@v3.12.14
-    #   with:
-    #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-    #     heroku_app_name: "your-app-name"
-    #     heroku_email: "your-email@example.com"
+    - name: Setup GitHub Pages
+      uses: actions/configure-pages@v4
     
-    # Example: Deploy to Vercel
-    # - name: Deploy to Vercel
-    #   uses: amondnet/vercel-action@v25
-    #   with:
-    #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
-    #     vercel-org-id: ${{ secrets.ORG_ID }}
-    #     vercel-project-id: ${{ secrets.PROJECT_ID }}
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './pages-dist'
     
-    # Example: Deploy to AWS/DigitalOcean/etc via SSH
-    # - name: Deploy via SSH
-    #   uses: appleboy/ssh-action@v0.1.7
-    #   with:
-    #     host: ${{ secrets.HOST }}
-    #     username: ${{ secrets.USERNAME }}
-    #     key: ${{ secrets.SSH_KEY }}
-    #     script: |
-    #       cd /path/to/your/app
-    #       git pull origin main
-    #       npm ci
-    #       npm run db:push
-    #       pm2 restart your-app
-
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+    
     - name: Deployment Success
       run: |
-        echo "🚀 Deployment completed successfully!"
-        echo "All secrets are securely managed via GitHub Actions"
+        echo "🚀 Frontend deployed to GitHub Pages successfully!"
+        echo "📋 Note: Backend APIs need separate hosting (Heroku/Railway/etc)"
+        echo "🔗 Your app will be available at: ${{ steps.deployment.outputs.page_url }}"
