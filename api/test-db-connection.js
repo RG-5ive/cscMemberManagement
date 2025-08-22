@@ -14,31 +14,20 @@ export default async function handler(req, res) {
 
   const results = [];
   
-  // Test 1: SSL require (NeonDB recommended)
+  // Test with manual NeonDB-specific configuration
   try {
-    const pool1 = new Pool({
-      connectionString: process.env.DATABASE_URL,
+    console.log('Testing manual NeonDB configuration...');
+    
+    // Parse DATABASE_URL for manual connection
+    const url = new URL(process.env.DATABASE_URL);
+    const connectionString = process.env.DATABASE_URL; // Use environment variable instead of hardcoded value
+    
+    const manualPool = new Pool({
+      connectionString: connectionString,
       ssl: { require: true }
     });
-    const result = await pool1.query('SELECT NOW() as current_time, version() as db_version');
-    await pool1.end();
-    results.push(`✅ SSL require: SUCCESS - ${result.rows[0].db_version}`);
-  } catch (error) {
-    results.push(`❌ SSL require: ${error.message}`);
-  }
-
-  // Test 2: Direct NeonDB connection with manual config
-  try {
-    const pool2 = new Pool({
-      host: 'ep-falling-pine-a6yv1efa.us-west-2.aws.neon.tech',
-      port: 5432,
-      database: 'neondb',
-      user: 'neondb_owner',
-      password: 'npg_1KEYNRu0MHdG',
-      ssl: { require: true }
-    });
-    const result = await pool2.query('SELECT NOW() as current_time');
-    await pool2.end();
+    const result = await manualPool.query('SELECT NOW() as current_time');
+    await manualPool.end();
     results.push('✅ Manual NeonDB config: SUCCESS');
   } catch (error) {
     results.push(`❌ Manual NeonDB config: ${error.message}`);
