@@ -1,5 +1,5 @@
 // Simple test endpoint to verify functions work
-module.exports = async (req, res) => {
+export default function handler(req, res) {
   res.json({
     success: true,
     message: "Function is working!",
@@ -13,4 +13,4 @@ module.exports = async (req, res) => {
       )
     }
   });
-}; 
+} 
