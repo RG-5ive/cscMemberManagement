@@ -39,15 +39,16 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session configuration
+// Session configuration - using memory store for testing
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Force session creation for testing
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always use secure cookies in production (HTTPS)
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' // Allow same-site requests for proper functionality
   }
 }));
 
@@ -141,7 +142,9 @@ app.get('/api/user', (req, res) => {
 app.get('/api/session/check', (req, res) => {
   res.json({ 
     authenticated: !!req.user,
-    user: req.user ? formatUserResponse(req.user) : null 
+    user: req.user ? formatUserResponse(req.user) : null,
+    sessionId: req.sessionID,
+    hasSession: !!req.session
   });
 });
 
@@ -159,9 +162,18 @@ app.post('/api/member/login', (req, res, next) => {
       if (err) {
         return res.status(500).json({ message: 'Session error', error: err.message });
       }
-      res.json({ 
-        message: 'Login successful',
-        user: formatUserResponse(user)
+      
+      // Force session save
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+        }
+        
+        res.json({ 
+          message: 'Login successful',
+          user: formatUserResponse(user),
+          sessionId: req.sessionID
+        });
       });
     });
   })(req, res, next);
@@ -181,7 +193,15 @@ app.post('/api/login', (req, res, next) => {
       if (err) {
         return res.status(500).json({ message: 'Session error', error: err.message });
       }
-      res.json(formatUserResponse(user));
+      
+      // Force session save
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+        }
+        
+        res.json(formatUserResponse(user));
+      });
     });
   })(req, res, next);
 });
@@ -205,7 +225,15 @@ app.post('/api/admin/login', (req, res, next) => {
       if (err) {
         return res.status(500).json({ message: 'Session error', error: err.message });
       }
-      res.json(formatUserResponse(user));
+      
+      // Force session save
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+        }
+        
+        res.json(formatUserResponse(user));
+      });
     });
   })(req, res, next);
 });
