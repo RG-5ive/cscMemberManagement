@@ -29,6 +29,10 @@
       "dest": "/api/test-db-connection.js"
     },
     {
+      "src": "/api/inspect-db",
+      "dest": "/api/inspect-db.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/index.js"
     },
