@@ -1,14 +1,51 @@
-// Vercel serverless function - simplified approach
+// Vercel serverless function - JWT-based authentication
 import express from 'express';
-import session from 'express-session';
-import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
 import pg from 'pg';
 import crypto from 'crypto';
 import { promisify } from 'util';
 
 const { Pool } = pg;
 const scryptAsync = promisify(crypto.scrypt);
+
+// Simple JWT implementation without external dependencies
+function createJWT(payload, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64url');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+function verifyJWT(token, secret) {
+  try {
+    const [encodedHeader, encodedPayload, signature] = token.split('.');
+    
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64url');
+    
+    if (signature !== expectedSignature) {
+      return null;
+    }
+    
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString());
+    
+    // Check expiration
+    if (payload.exp && Date.now() / 1000 > payload.exp) {
+      return null;
+    }
+    
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 // Hash password function
 async function hashPassword(password) {
@@ -39,81 +76,35 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+// JWT authentication middleware
+const authenticateJWT = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    req.user = null;
+    return next();
   }
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Passport configuration for member login (email)
-passport.use('member', new LocalStrategy({
-  usernameField: 'email',
-  passwordField: 'password'
-}, async (email, password, done) => {
+  
+  const payload = verifyJWT(token, process.env.SESSION_SECRET || 'your-secret-key');
+  
+  if (!payload) {
+    req.user = null;
+    return next();
+  }
+  
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
-    
-    if (!user) {
-      return done(null, false, { message: 'User not found' });
-    }
-    
-    const isValid = await comparePasswords(password, user.password);
-    if (!isValid) {
-      return done(null, false, { message: 'Invalid password' });
-    }
-    
-    return done(null, user);
+    // Get fresh user data from database
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [payload.userId]);
+    req.user = result.rows[0] || null;
   } catch (error) {
-    return done(error);
+    req.user = null;
   }
-}));
+  
+  next();
+};
 
-// Passport configuration for admin/chair login (username)
-passport.use('admin', new LocalStrategy({
-  usernameField: 'username',
-  passwordField: 'password'
-}, async (username, password, done) => {
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    const user = result.rows[0];
-    
-    if (!user) {
-      return done(null, false, { message: 'User not found' });
-    }
-    
-    const isValid = await comparePasswords(password, user.password);
-    if (!isValid) {
-      return done(null, false, { message: 'Invalid password' });
-    }
-    
-    return done(null, user);
-  } catch (error) {
-    return done(error);
-  }
-}));
-
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    done(null, result.rows[0]);
-  } catch (error) {
-    done(error);
-  }
-});
+app.use(authenticateJWT);
 
 // Helper function to format user response
 function formatUserResponse(user) {
@@ -127,6 +118,18 @@ function formatUserResponse(user) {
     memberLevel: user.member_level,
     hasCompletedOnboarding: user.has_completed_onboarding
   };
+}
+
+// Helper function to create auth token
+function createAuthToken(user) {
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+  };
+  
+  return createJWT(payload, process.env.SESSION_SECRET || 'your-secret-key');
 }
 
 // Routes
@@ -145,78 +148,108 @@ app.get('/api/session/check', (req, res) => {
   });
 });
 
-// Member login (email-based)
-app.post('/api/member/login', (req, res, next) => {
-  passport.authenticate('member', (err, user, info) => {
-    if (err) {
-      return res.status(500).json({ message: 'Login error', error: err.message });
-    }
+// Helper function for login
+async function handleLogin(email, password, usernameField = 'email') {
+  try {
+    const query = usernameField === 'email' 
+      ? 'SELECT * FROM users WHERE email = $1'
+      : 'SELECT * FROM users WHERE username = $1';
+    
+    const result = await pool.query(query, [email]);
+    const user = result.rows[0];
+    
     if (!user) {
-      return res.status(401).json({ message: info?.message || 'Login failed' });
+      return { success: false, message: 'User not found' };
     }
     
-    req.logIn(user, (err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Session error', error: err.message });
-      }
-      res.json({ 
-        message: 'Login successful',
-        user: formatUserResponse(user)
-      });
-    });
-  })(req, res, next);
+    const isValid = await comparePasswords(password, user.password);
+    if (!isValid) {
+      return { success: false, message: 'Invalid password' };
+    }
+    
+    const token = createAuthToken(user);
+    
+    return { 
+      success: true, 
+      user: formatUserResponse(user),
+      token 
+    };
+  } catch (error) {
+    return { success: false, message: 'Login error', error: error.message };
+  }
+}
+
+// Member login (email-based)
+app.post('/api/member/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+  
+  const result = await handleLogin(email, password, 'email');
+  
+  if (!result.success) {
+    return res.status(401).json({ message: result.message, error: result.error });
+  }
+  
+  res.json({
+    message: 'Login successful',
+    user: result.user,
+    authToken: result.token
+  });
 });
 
 // General login (username-based for chairs/admins)
-app.post('/api/login', (req, res, next) => {
-  passport.authenticate('admin', (err, user, info) => {
-    if (err) {
-      return res.status(500).json({ message: 'Login error', error: err.message });
-    }
-    if (!user) {
-      return res.status(401).json({ message: info?.message || 'Login failed' });
-    }
-    
-    req.logIn(user, (err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Session error', error: err.message });
-      }
-      res.json(formatUserResponse(user));
-    });
-  })(req, res, next);
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+  
+  const result = await handleLogin(username, password, 'username');
+  
+  if (!result.success) {
+    return res.status(401).json({ message: result.message, error: result.error });
+  }
+  
+  res.json({
+    message: 'Login successful',
+    user: result.user,
+    authToken: result.token
+  });
 });
 
 // Admin login (username-based)
-app.post('/api/admin/login', (req, res, next) => {
-  passport.authenticate('admin', (err, user, info) => {
-    if (err) {
-      return res.status(500).json({ message: 'Login error', error: err.message });
-    }
-    if (!user) {
-      return res.status(401).json({ message: info?.message || 'Login failed' });
-    }
-    
-    // Check if user has admin role
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
-    }
-    
-    req.logIn(user, (err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Session error', error: err.message });
-      }
-      res.json(formatUserResponse(user));
-    });
-  })(req, res, next);
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+  
+  const result = await handleLogin(username, password, 'username');
+  
+  if (!result.success) {
+    return res.status(401).json({ message: result.message, error: result.error });
+  }
+  
+  // Check if user has admin role
+  if (result.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  }
+  
+  res.json({
+    message: 'Login successful',
+    user: result.user,
+    authToken: result.token
+  });
 });
 
 app.post('/api/logout', (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      return res.status(500).json({ message: 'Logout error' });
-    }
-    res.json({ message: 'Logged out successfully' });
-  });
+  // With JWT, logout is handled client-side by removing the token
+  res.json({ message: 'Logged out successfully' });
 });
 
 // Default handler
