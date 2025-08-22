@@ -54,13 +54,37 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Passport configuration
+// Passport configuration for member login (email)
 passport.use('member', new LocalStrategy({
   usernameField: 'email',
   passwordField: 'password'
 }, async (email, password, done) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    
+    if (!user) {
+      return done(null, false, { message: 'User not found' });
+    }
+    
+    const isValid = await comparePasswords(password, user.password);
+    if (!isValid) {
+      return done(null, false, { message: 'Invalid password' });
+    }
+    
+    return done(null, user);
+  } catch (error) {
+    return done(error);
+  }
+}));
+
+// Passport configuration for admin/chair login (username)
+passport.use('admin', new LocalStrategy({
+  usernameField: 'username',
+  passwordField: 'password'
+}, async (username, password, done) => {
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
     
     if (!user) {
@@ -91,10 +115,24 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
+// Helper function to format user response
+function formatUserResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    memberLevel: user.member_level,
+    hasCompletedOnboarding: user.has_completed_onboarding
+  };
+}
+
 // Routes
 app.get('/api/user', (req, res) => {
   if (req.user) {
-    res.json(req.user);
+    res.json(formatUserResponse(req.user));
   } else {
     res.status(401).json({ message: 'Not authenticated' });
   }
@@ -103,10 +141,11 @@ app.get('/api/user', (req, res) => {
 app.get('/api/session/check', (req, res) => {
   res.json({ 
     authenticated: !!req.user,
-    user: req.user || null 
+    user: req.user ? formatUserResponse(req.user) : null 
   });
 });
 
+// Member login (email-based)
 app.post('/api/member/login', (req, res, next) => {
   passport.authenticate('member', (err, user, info) => {
     if (err) {
@@ -122,14 +161,51 @@ app.post('/api/member/login', (req, res, next) => {
       }
       res.json({ 
         message: 'Login successful',
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          firstName: user.first_name,
-          lastName: user.last_name
-        }
+        user: formatUserResponse(user)
       });
+    });
+  })(req, res, next);
+});
+
+// General login (username-based for chairs/admins)
+app.post('/api/login', (req, res, next) => {
+  passport.authenticate('admin', (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ message: 'Login error', error: err.message });
+    }
+    if (!user) {
+      return res.status(401).json({ message: info?.message || 'Login failed' });
+    }
+    
+    req.logIn(user, (err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Session error', error: err.message });
+      }
+      res.json(formatUserResponse(user));
+    });
+  })(req, res, next);
+});
+
+// Admin login (username-based)
+app.post('/api/admin/login', (req, res, next) => {
+  passport.authenticate('admin', (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ message: 'Login error', error: err.message });
+    }
+    if (!user) {
+      return res.status(401).json({ message: info?.message || 'Login failed' });
+    }
+    
+    // Check if user has admin role
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+    
+    req.logIn(user, (err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Session error', error: err.message });
+      }
+      res.json(formatUserResponse(user));
     });
   })(req, res, next);
 });
