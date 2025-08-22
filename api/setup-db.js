@@ -18,9 +18,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'DATABASE_URL not configured' });
   }
 
+  // NeonDB requires SSL
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { require: true, rejectUnauthorized: false }
+    ssl: { require: true }
   });
 
   try {
