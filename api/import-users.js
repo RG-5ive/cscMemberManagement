@@ -1,4 +1,4 @@
-// API endpoint to import users from CSV data
+// API endpoint to import users from CSV data into existing schema
 import pg from 'pg';
 import crypto from 'crypto';
 import { promisify } from 'util';
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   });
 
   try {
-    console.log('Starting user import...');
+    console.log('Starting user import with existing schema...');
     
     let successCount = 0;
     let errorCount = 0;
@@ -64,27 +64,27 @@ export default async function handler(req, res) {
         // Hash the password
         const hashedPassword = await hashPassword(userData.password);
         
-        // Insert user (or update if exists)
+        // Insert user using existing schema (snake_case columns)
         const query = `
-          INSERT INTO users (email, password, "firstName", "lastName", role, username, "createdAt")
+          INSERT INTO users (username, email, password, first_name, last_name, role, created_at)
           VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
           ON CONFLICT (email) 
           DO UPDATE SET 
             password = EXCLUDED.password,
-            "firstName" = EXCLUDED."firstName",
-            "lastName" = EXCLUDED."lastName",
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
             role = EXCLUDED.role,
             username = EXCLUDED.username
           RETURNING id, email, role
         `;
         
         const result = await pool.query(query, [
+          userData.email.split('@')[0], // username from email
           userData.email,
           hashedPassword,
           userData.firstName,
           userData.lastName,
-          userData.role,
-          userData.email.split('@')[0], // username from email
+          userData.role
         ]);
         
         const user = result.rows[0];
