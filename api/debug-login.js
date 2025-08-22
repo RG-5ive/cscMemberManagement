@@ -1,7 +1,8 @@
 // Debug endpoint to check login issues
-const { Pool } = require('pg');
+import pg from 'pg';
+const { Pool } = pg;
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -109,4 +110,4 @@ module.exports = async (req, res) => {
   } finally {
     await pool.end();
   }
-}; 
+} 

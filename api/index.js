@@ -1,5 +1,5 @@
 // Vercel serverless function wrapper for Express app
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     // Simple response for now to test if functions work
     res.status(200).json({
@@ -19,4 +19,4 @@ module.exports = async (req, res) => {
       details: error.message 
     });
   }
-}; 
+} 

@@ -1,8 +1,9 @@
 // API endpoint to import users from CSV data
-const { Pool } = require('pg');
-const crypto = require('crypto');
-const { promisify } = require('util');
+import pg from 'pg';
+import crypto from 'crypto';
+import { promisify } from 'util';
 
+const { Pool } = pg;
 const scryptAsync = promisify(crypto.scrypt);
 
 // Hash a password using scrypt (same as the app)
@@ -30,7 +31,7 @@ const usersData = [
   { email: 'andrepienaar@mac.com', password: 'pieand487', firstName: 'Pienaar', lastName: 'Andre', role: 'user' }
 ];
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -121,4 +122,4 @@ module.exports = async (req, res) => {
   } finally {
     await pool.end();
   }
-}; 
+} 
