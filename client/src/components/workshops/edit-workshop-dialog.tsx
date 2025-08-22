@@ -87,7 +87,7 @@ export default function EditWorkshopDialog({
         description: workshop.description,
         date: workshopDate,
         time: timeString,
-        location: workshop.location_address || "",
+        location: workshop.locationAddress || "",
         capacity: workshop.capacity,
       });
     }

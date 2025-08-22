@@ -1,0 +1,111 @@
+Run npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/home/runner/work/cscMemberManagement/cscMemberManagement/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[✓] Pulling schema from database...
+[✓] Changes applied
+
+> rest-express@1.0.0 check
+> tsc
+
+Error: client/src/components/admin/committee-members-manager.tsx(508,27): error TS2339: Property 'description' does not exist on type '{}'.
+Error: client/src/components/admin/committee-members-manager.tsx(509,78): error TS2339: Property 'description' does not exist on type '{}'.
+Error: client/src/components/admin/committee-members-manager.tsx(650,15): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+Error: client/src/components/admin/committee-members-manager.tsx(672,19): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+Error: client/src/components/admin/committee-members-manager.tsx(800,34): error TS18046: 'roles' is of type 'unknown'.
+Error: client/src/components/admin/committee-members-manager.tsx(813,21): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+Error: client/src/components/admin/diversity-committee-requests.tsx(43,74): error TS2345: Argument of type '{ method: string; body: string; }' is not assignable to parameter of type 'string'.
+Error: client/src/components/ui/mock-calendar.tsx(97,8): error TS18046: 'calendarEvents' is of type 'unknown'.
+Error: client/src/components/ui/mock-calendar.tsx(103,8): error TS18046: 'workshops' is of type 'unknown'.
+Error: client/src/components/ui/mock-calendar.tsx(117,32): error TS2304: Cannot find name 'mockEvents'.
+Error: client/src/components/ui/mock-calendar.tsx(117,47): error TS2304: Cannot find name 'localEvents'.
+Error: client/src/components/ui/mock-calendar.tsx(121,40): error TS2339: Property 'map' does not exist on type '{}'.
+Error: client/src/components/ui/mock-calendar.tsx(135,5): error TS2552: Cannot find name 'setEvents'. Did you mean 'events'?
+Error: client/src/components/ui/mock-calendar.tsx(136,18): error TS2304: Cannot find name 'localEvents'.
+Error: client/src/components/ui/mock-calendar.tsx(167,7): error TS2322: Type 'string' is not assignable to type 'number'.
+Error: client/src/components/ui/mock-calendar.tsx(174,7): error TS2322: Type 'string' is not assignable to type 'number'.
+Error: client/src/components/ui/mock-calendar.tsx(177,5): error TS2304: Cannot find name 'setLocalEvents'.
+Error: client/src/components/ui/mock-calendar.tsx(177,24): error TS2304: Cannot find name 'localEvents'.
+Error: client/src/components/ui/mock-calendar.tsx(178,17): error TS2345: Argument of type '{ title: string; description: string; time: string; location: string; type: "meeting"; }' is not assignable to parameter of type 'SetStateAction<{ title: string; description: string; time: string; location: string; type: CalendarEvent["type"]; date: Date; attendees: string[]; }>'.
+  Type '{ title: string; description: string; time: string; location: string; type: "meeting"; }' is missing the following properties from type '{ title: string; description: string; time: string; location: string; type: CalendarEvent["type"]; date: Date; attendees: string[]; }': date, attendees
+Error: client/src/components/ui/mock-calendar.tsx(188,17): error TS2345: Argument of type '{ title: string; description: string; time: string; location: string; type: "meeting"; }' is not assignable to parameter of type 'SetStateAction<{ title: string; description: string; time: string; location: string; type: CalendarEvent["type"]; date: Date; attendees: string[]; }>'.
+  Type '{ title: string; description: string; time: string; location: string; type: "meeting"; }' is missing the following properties from type '{ title: string; description: string; time: string; location: string; type: CalendarEvent["type"]; date: Date; attendees: string[]; }': date, attendees
+Error: client/src/components/ui/mock-calendar.tsx(278,38): error TS2345: Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+  Type 'null' is not assignable to type 'string | number | Date'.
+Error: client/src/components/ui/mock-calendar.tsx(361,35): error TS2345: Argument of type 'Date | null' is not assignable to parameter of type 'Date'.
+  Type 'null' is not assignable to type 'Date'.
+Error: client/src/components/ui/mock-calendar.tsx(362,36): error TS2345: Argument of type 'Date | null' is not assignable to parameter of type 'Date'.
+  Type 'null' is not assignable to type 'Date'.
+Error: client/src/components/workshops/edit-workshop-dialog.tsx(90,28): error TS2551: Property 'location_address' does not exist on type '{ title: string; id: number; date: Date; description: string; createdAt: Date | null; createdById: number | null; committeeId: number | null; capacity: number; locationAddress: string | null; ... 6 more ...; requiresApproval: boolean | null; }'. Did you mean 'locationAddress'?
+Error: client/src/pages/committee-admin-simple.tsx(22,37): error TS2339: Property 'committee' does not exist on type '{ [param: number]: string | undefined; }'.
+Error: client/src/pages/committee-admin-simple.tsx(22,65): error TS2339: Property 'committee' does not exist on type '{ [param: number]: string | undefined; }'.
+Error: client/src/pages/committee-admin-simple.tsx(104,24): error TS2322: Type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "meeting"; } | { id: string; title: string; description: string; ... 5 more ...; type: "workshop"; } | { ...; }' is not assignable to type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "meeting"; } | { id: string; title: string; description: string; ... 5 more ...; type: "workshop"; }'.
+  Type '{ id: string; title: string; description: string; date: string; time: string; duration: string; location: string; type: "meeting" | "workshop" | "event"; attendees: number; }' is not assignable to type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "meeting"; } | { id: string; title: string; description: string; ... 5 more ...; type: "workshop"; }'.
+    Type '{ id: string; title: string; description: string; date: string; time: string; duration: string; location: string; type: "meeting" | "workshop" | "event"; attendees: number; }' is not assignable to type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "workshop"; }'.
+      Types of property 'type' are incompatible.
+        Type '"meeting" | "workshop" | "event"' is not assignable to type '"workshop"'.
+          Type '"meeting"' is not assignable to type '"workshop"'.
+Error: client/src/pages/committee-admin-simple.tsx(104,43): error TS2322: Type '{ id: string; title: string; description: string; date: string; time: string; duration: string; location: string; type: "meeting" | "workshop" | "event"; attendees: number; }' is not assignable to type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "meeting"; } | { id: string; title: string; description: string; ... 5 more ...; type: "workshop"; }'.
+  Type '{ id: string; title: string; description: string; date: string; time: string; duration: string; location: string; type: "meeting" | "workshop" | "event"; attendees: number; }' is not assignable to type '{ id: string; title: string; description: string; date: string; time: string; duration: string; attendees: number; location: string; type: "workshop"; }'.
+    Types of property 'type' are incompatible.
+      Type '"meeting" | "workshop" | "event"' is not assignable to type '"workshop"'.
+        Type '"meeting"' is not assignable to type '"workshop"'.
+Error: client/src/pages/committee-admin-simple.tsx(152,44): error TS2339: Property 'find' does not exist on type '{}'.
+Error: client/src/pages/committee-admin-simple.tsx(153,40): error TS2339: Property 'find' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(75,46): error TS2339: Property 'filter' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(119,44): error TS2339: Property 'some' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(135,27): error TS2339: Property 'length' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(184,48): error TS2339: Property 'find' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(218,13): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+Error: client/src/pages/committee-admin.tsx(218,55): error TS2339: Property 'length' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(227,25): error TS2339: Property 'filter' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(283,54): error TS2339: Property 'name' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(284,43): error TS2339: Property 'description' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(286,46): error TS2339: Property 'description' does not exist on type '{}'.
+Error: client/src/pages/committee-admin.tsx(297,119): error TS2339: Property 'description' does not exist on type '{}'.
+Error: client/src/pages/committee-management.tsx(251,15): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+Error: client/src/pages/dashboard.tsx(128,33): error TS2367: This comparison appears to be unintentional because the types '"user" | "committee_chair" | "committee_cochair" | "committee_member" | undefined' and '"admin"' have no overlap.
+Error: server/auth.ts(313,62): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/auth.ts(325,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/auth.ts(338,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/auth.ts(480,18): error TS7053: Element implicitly has an 'any' type because expression of type '"user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"' can't be used to index type '{ committee_chair: string[]; committee_cochair: string[]; committee_member: never[]; }'.
+  Property 'user' does not exist on type '{ committee_chair: string[]; committee_cochair: string[]; committee_member: never[]; }'.
+Error: server/auth.ts(481,27): error TS7053: Element implicitly has an 'any' type because expression of type '"user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"' can't be used to index type '{ committee_chair: string[]; committee_cochair: string[]; committee_member: never[]; }'.
+  Property 'user' does not exist on type '{ committee_chair: string[]; committee_cochair: string[]; committee_member: never[]; }'.
+Error: server/auth.ts(481,72): error TS7006: Parameter 'perm' implicitly has an 'any' type.
+Error: server/auth.ts(481,80): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'false | { id: number; role: "user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"; email: string; location: string | null; username: string; password: string; ... 15 more ...; createdAt: Date | null; }'.
+Error: server/memory-storage.ts(76,14): error TS2420: Class 'MemStorage' incorrectly implements interface 'IStorage'.
+  Type 'MemStorage' is missing the following properties from type 'IStorage': createMessageGroup, getMessageGroups, getMessageGroupById, updateMessageGroup, and 6 more.
+Error: server/memory-storage.ts(126,11): error TS2739: Type '{ id: number; username: string; firstName: string; lastName: string; email: string; password: string; role: "admin"; phoneNumber: null; alternateEmail: null; emergencyContact: null; emergencyPhone: null; ... 7 more ...; createdAt: Date; }' is missing the following properties from type '{ id: number; role: "user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"; email: string; location: string | null; username: string; password: string; firstName: string | null; ... 14 more ...; createdAt: Date | null; }': canManageCommittees, canManageWorkshops, hasCompletedOnboarding
+Error: server/memory-storage.ts(214,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/memory-storage.ts(219,29): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/memory-storage.ts(225,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/memory-storage.ts(226,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/memory-storage.ts(227,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+Error: server/routes.ts(40,31): error TS2341: Property 'client' is private and only accessible within class 'CSCDiscordBot'.
+Error: server/storage.ts(94,50): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { email: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; password: string | SQL<unknown> | Placeholder<...>; ... 18 more ...; createdAt?: SQL<...> | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Argument of type '{ role: "user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"; canManageCommittees: boolean; canManageWorkshops: boolean; email?: string | undefined; username?: string | undefined; ... 8 more ...; hasCompletedOnboarding?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ email: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; password: string | SQL<unknown> | Placeholder<...>; ... 18 more ...; createdAt?: SQL<...> | ... 3 more ... | undefined; }'.
+      Types of property 'email' are incompatible.
+        Type 'string | undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+          Type 'undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { email: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; password: string | SQL<unknown> | Placeholder<...>; ... 18 more ...; createdAt?: SQL<...> | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Argument of type '{ role: "user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"; canManageCommittees: boolean; canManageWorkshops: boolean; email?: string | undefined; username?: string | undefined; ... 8 more ...; hasCompletedOnboarding?: boolean | ... 1 more ... | undefined; }' is not assignable to parameter of type '{ email: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; password: string | SQL<unknown> | Placeholder<...>; ... 18 more ...; createdAt?: SQL<...> | ... 3 more ... | undefined; }[]'.
+      Type '{ role: "user" | "admin" | "committee_chair" | "committee_cochair" | "committee_member"; canManageCommittees: boolean; canManageWorkshops: boolean; email?: string | undefined; username?: string | undefined; ... 8 more ...; hasCompletedOnboarding?: boolean | ... 1 more ... | undefined; }' is missing the following properties from type '{ email: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; password: string | SQL<unknown> | Placeholder<...>; ... 18 more ...; createdAt?: SQL<...> | ... 3 more ... | undefined; }[]': length, pop, push, concat, and 35 more.
+Error: server/vite.ts(42,5): error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+Error: Process completed with exit code 2.

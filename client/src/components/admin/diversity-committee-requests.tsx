@@ -40,10 +40,7 @@ export function DiversityCommitteeRequests() {
 
   const reviewRequestMutation = useMutation({
     mutationFn: async ({ requestId, status, reviewNotes }: { requestId: number; status: "approved" | "rejected"; reviewNotes: string }) => {
-      return apiRequest(`/api/demographic-change-requests/${requestId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, reviewNotes }),
-      });
+      return apiRequest("PATCH", `/api/demographic-change-requests/${requestId}`, { status, reviewNotes });
     },
     onSuccess: (_, variables) => {
       toast({
