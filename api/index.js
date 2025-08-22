@@ -1,25 +1,149 @@
-// Vercel serverless function wrapper for Express app
-let expressApp = null;
+// Vercel serverless function - simplified approach
+import express from 'express';
+import session from 'express-session';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import pg from 'pg';
+import crypto from 'crypto';
+import { promisify } from 'util';
 
-export default async function handler(req, res) {
+const { Pool } = pg;
+const scryptAsync = promisify(crypto.scrypt);
+
+// Hash password function
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const buf = await scryptAsync(password, salt, 64);
+  return `${buf.toString('hex')}.${salt}`;
+}
+
+// Compare password function
+async function comparePasswords(password, hash) {
   try {
-    // Initialize the Express app only once
-    if (!expressApp) {
-      const { default: app } = await import('../dist/index.js');
-      
-      // Give the app a moment to finish async initialization
-      await new Promise(resolve => setTimeout(resolve, 100));
-      expressApp = app;
+    const [hashedPassword, salt] = hash.split('.');
+    const buf = await scryptAsync(password, salt, 64);
+    return buf.toString('hex') === hashedPassword;
+  } catch {
+    return false;
+  }
+}
+
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { require: true }
+});
+
+// Express app setup
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport configuration
+passport.use('member', new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password'
+}, async (email, password, done) => {
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    
+    if (!user) {
+      return done(null, false, { message: 'User not found' });
     }
     
-    // Handle the request with the Express app
-    expressApp(req, res);
+    const isValid = await comparePasswords(password, user.password);
+    if (!isValid) {
+      return done(null, false, { message: 'Invalid password' });
+    }
+    
+    return done(null, user);
   } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    return done(error);
   }
+}));
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    done(null, result.rows[0]);
+  } catch (error) {
+    done(error);
+  }
+});
+
+// Routes
+app.get('/api/user', (req, res) => {
+  if (req.user) {
+    res.json(req.user);
+  } else {
+    res.status(401).json({ message: 'Not authenticated' });
+  }
+});
+
+app.get('/api/session/check', (req, res) => {
+  res.json({ 
+    authenticated: !!req.user,
+    user: req.user || null 
+  });
+});
+
+app.post('/api/member/login', (req, res, next) => {
+  passport.authenticate('member', (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ message: 'Login error', error: err.message });
+    }
+    if (!user) {
+      return res.status(401).json({ message: info?.message || 'Login failed' });
+    }
+    
+    req.logIn(user, (err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Session error', error: err.message });
+      }
+      res.json({ 
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          firstName: user.first_name,
+          lastName: user.last_name
+        }
+      });
+    });
+  })(req, res, next);
+});
+
+app.post('/api/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ message: 'Logout error' });
+    }
+    res.json({ message: 'Logged out successfully' });
+  });
+});
+
+// Default handler
+export default function handler(req, res) {
+  return app(req, res);
 } 
