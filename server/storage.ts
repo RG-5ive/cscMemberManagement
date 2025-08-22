@@ -415,5 +415,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Export a DatabaseStorage instance
-export const storage = new DatabaseStorage();
+// Temporarily use MemStorage while database is being fixed
+import { MemStorage } from './memory-storage';
+
+// Export a MemStorage instance (temporary fix for database issues)
+export const storage = new MemStorage();
+
+// Once database is fixed, uncomment this line and comment the above:
+// export const storage = new DatabaseStorage();
