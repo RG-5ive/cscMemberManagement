@@ -21,8 +21,16 @@
       "dest": "/api/debug-login.js"
     },
     {
+      "src": "/api/simple-test",
+      "dest": "/api/simple-test.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/index.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     },
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
