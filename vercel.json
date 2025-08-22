@@ -5,6 +5,26 @@
   "installCommand": "npm ci",
   "routes": [
     {
+      "src": "/api/test",
+      "dest": "/api/test.js"
+    },
+    {
+      "src": "/api/setup-db",
+      "dest": "/api/setup-db.js"
+    },
+    {
+      "src": "/api/import-users",
+      "dest": "/api/import-users.js"
+    },
+    {
+      "src": "/api/debug-login",
+      "dest": "/api/debug-login.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
