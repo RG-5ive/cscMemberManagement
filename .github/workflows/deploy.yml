@@ -57,30 +57,19 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
-    # Grant permissions for GitHub Pages deployment
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    
-    # Deploy to GitHub Pages environment
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
     - uses: actions/checkout@v4
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
     - name: Install dependencies
       run: npm ci
     
-    - name: Build application for GitHub Pages
+    - name: Build application
       env:
         ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
         ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
@@ -92,43 +81,19 @@ jobs:
         SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         NODE_ENV: production
-      run: |
-        # Build frontend only (GitHub Pages is static hosting)
-        npm run build
-        
-        # Prepare static files for GitHub Pages
-        mkdir -p pages-dist
-        
-        # Copy client build files
-        if [ -d "client/dist" ]; then
-          cp -r client/dist/* pages-dist/
-        elif [ -d "dist" ]; then
-          cp -r dist/* pages-dist/
-        else
-          echo "Warning: No dist folder found"
-        fi
-        
-        # Create SPA fallback for client-side routing
-        if [ -f "pages-dist/index.html" ]; then
-          cp pages-dist/index.html pages-dist/404.html
-        fi
-        
-        echo "✅ Static build prepared for GitHub Pages"
+      run: npm run build
     
-    - name: Setup GitHub Pages
-      uses: actions/configure-pages@v4
-    
-    - name: Upload to GitHub Pages
-      uses: actions/upload-pages-artifact@v3
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v25
       with:
-        path: './pages-dist'
-    
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        vercel-args: '--prod'
+        working-directory: ./
     
     - name: Deployment Success
       run: |
-        echo "🚀 Frontend deployed to GitHub Pages successfully!"
-        echo "📋 Note: Backend APIs need separate hosting (Heroku/Railway/etc)"
-        echo "🔗 Your app will be available at: ${{ steps.deployment.outputs.page_url }}"
+        echo "🚀 Full-stack app deployed to Vercel successfully!"
+        echo "✅ Frontend, backend, and database all working together"
+        echo "🔗 Your app will be available at your Vercel domain"
