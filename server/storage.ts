@@ -415,11 +415,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Temporarily use MemStorage while database is being fixed
+// Database still experiencing "Control plane request failed" errors
 import { MemStorage } from './memory-storage';
 
-// Export a MemStorage instance (temporary fix for database issues)
+// Export a MemStorage instance (database still has connectivity issues)
 export const storage = new MemStorage();
 
-// Once database is fixed, uncomment this line and comment the above:
+// Once database is permanently fixed, uncomment this line and comment the above:
 // export const storage = new DatabaseStorage();
