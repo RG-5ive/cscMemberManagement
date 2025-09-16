@@ -131,7 +131,7 @@ export class MemStorage implements IStorage {
       firstName: "Rion",
       lastName: "Admin",
       email: "rion.admin@csc.ca",
-      password: "$2b$10$rFxPfz9KbgWQG1iOWo3A9WG9OOMYlJOQ/dUY8Bz.xqI", // 249JunK-C*
+      password: "f7ef7b74854dc630b663f0c9b6efc376ea35e1e88621583b14b2bb551aaf30b1d3c3ebf8abbb2e18060b5d2e12b1ef91e001b8c35fc9a61eb669713ae10c17a8.100902da485d419dbf25124d8c68c4f5", // 249JunK-C*
       role: "admin",
       // Contact information
       phoneNumber: null,
