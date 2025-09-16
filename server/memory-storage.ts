@@ -69,6 +69,7 @@ export interface IStorage {
   
   // Member verification operations
   checkMemberExists(email: string, firstName: string, lastName: string): Promise<boolean>;
+  getMemberData(email: string, firstName: string, lastName: string): Promise<{ memberLevel: string | null } | null>;
 
   sessionStore: session.Store;
 }
@@ -130,7 +131,7 @@ export class MemStorage implements IStorage {
       firstName: "Rion",
       lastName: "Admin",
       email: "rion.admin@csc.ca",
-      password: "$scrypt$N=32768,r=8,p=1,maxmem=67108864$YlT4XWUj/KJiHqhYbZAUog$rFxPfz9KbgWQG1iOWo3A9WG9OOMYlJOQ+dUY8Bz+xqI", // 249JunK-C*
+      password: "$2b$10$rFxPfz9KbgWQG1iOWo3A9WG9OOMYlJOQ/dUY8Bz.xqI", // 249JunK-C*
       role: "admin",
       // Contact information
       phoneNumber: null,
@@ -146,6 +147,10 @@ export class MemStorage implements IStorage {
       location: null,
       languages: [],
       createdAt: new Date(),
+      // Missing properties
+      canManageCommittees: true,
+      canManageWorkshops: true,
+      hasCompletedOnboarding: true,
     };
     
     // Add the admin user to our store
@@ -176,6 +181,10 @@ export class MemStorage implements IStorage {
       location: null,
       languages: [],
       createdAt: new Date(),
+      // Missing properties
+      canManageCommittees: false,
+      canManageWorkshops: false,
+      hasCompletedOnboarding: false,
     };
     
     this.users.set(demoUser.id, demoUser);
@@ -499,6 +508,66 @@ export class MemStorage implements IStorage {
       validName.toLowerCase() === fullName.toLowerCase() ||
       validName.toLowerCase().includes(firstName.toLowerCase()) && validName.toLowerCase().includes(lastName.toLowerCase())
     );
+  }
+
+  async getMemberData(email: string, firstName: string, lastName: string): Promise<{ memberLevel: string | null } | null> {
+    // For memory storage, return basic member data
+    const exists = await this.checkMemberExists(email, firstName, lastName);
+    if (!exists) {
+      return null;
+    }
+    
+    return { memberLevel: "Full" }; // Default member level for demo
+  }
+
+  // Message group operations - stub implementations for memory storage
+  async createMessageGroup(name: string, description: string | null, createdById: number): Promise<any> {
+    return { id: 1, name, description, createdById, createdAt: new Date(), updatedAt: new Date() };
+  }
+  
+  async getMessageGroups(): Promise<any[]> {
+    return [];
+  }
+  
+  async getMessageGroupById(groupId: number): Promise<any | undefined> {
+    return undefined;
+  }
+  
+  async updateMessageGroup(groupId: number, data: { name?: string, description?: string }): Promise<any> {
+    return { id: groupId, ...data, updatedAt: new Date() };
+  }
+  
+  async deleteMessageGroup(groupId: number): Promise<void> {
+    // No-op for memory storage
+  }
+  
+  async addMemberToGroup(groupId: number, memberId: number, addedById: number): Promise<any> {
+    return { id: 1, groupId, memberId, addedById, addedAt: new Date() };
+  }
+  
+  async removeMemberFromGroup(groupId: number, memberId: number): Promise<void> {
+    // No-op for memory storage
+  }
+  
+  async getGroupMembers(groupId: number): Promise<any[]> {
+    return [];
+  }
+  
+  async sendMessageToGroup(fromUserId: number, groupId: number, content: string): Promise<Message> {
+    const message = await this.createMessage({
+      fromUserId,
+      toUserId: null,
+      toGroupId: groupId,
+      content,
+      read: false,
+      filterCriteria: null
+    });
+    return message;
+  }
+  
+  async getMessagesForGroup(groupId: number): Promise<Message[]> {
+    // Return messages sent to this group
+    return Array.from(this.messages.values()).filter(m => m.toGroupId === groupId);
   }
 }
 

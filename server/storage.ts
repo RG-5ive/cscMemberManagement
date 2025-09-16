@@ -415,11 +415,12 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Temporarily use MemStorage while database is being fixed
+// Neon database has persistent "Control plane request failed" errors
+// Temporarily using MemStorage until database connection is fixed
 import { MemStorage } from './memory-storage';
 
-// Export a MemStorage instance (temporary fix for database issues)
+// Export a MemStorage instance (temporary fix for database connection issues)
 export const storage = new MemStorage();
 
-// Once database is fixed, uncomment this line and comment the above:
+// Database storage backup (once Neon issues are resolved):
 // export const storage = new DatabaseStorage();
