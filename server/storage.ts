@@ -415,11 +415,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Database still experiencing "Control plane request failed" errors
+// Database connectivity issues persist even with new credentials
 import { MemStorage } from './memory-storage';
 
-// Export a MemStorage instance (database still has connectivity issues)
+// Export a MemStorage instance (database connectivity issues continue)
 export const storage = new MemStorage();
 
-// Once database is permanently fixed, uncomment this line and comment the above:
+// Database storage (enable when connectivity is resolved):
 // export const storage = new DatabaseStorage();
