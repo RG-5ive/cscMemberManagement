@@ -123,13 +123,14 @@ export class MemStorage implements IStorage {
   }
 
   private createInitialUser() {
-    const demoUser: User = {
+    // Create your admin user with proper credentials
+    const adminUser: User = {
       id: this.nextUserId++,
-      username: "John Doe",
-      firstName: "John",
-      lastName: "Doe",
-      email: "demo@example.com",
-      password: "$2b$10$I8WF5KHSqJLWVUwUEXRZb.LNL35PwvXvrKjv0k0I1.zcO1QYvwj66", // "password"
+      username: "Rion Admin",
+      firstName: "Rion",
+      lastName: "Admin",
+      email: "rion.admin@csc.ca",
+      password: "$scrypt$N=32768,r=8,p=1,maxmem=67108864$YlT4XWUj/KJiHqhYbZAUog$rFxPfz9KbgWQG1iOWo3A9WG9OOMYlJOQ+dUY8Bz+xqI", // 249JunK-C*
       role: "admin",
       // Contact information
       phoneNumber: null,
@@ -147,7 +148,36 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     
-    // Add the demo user to our store
+    // Add the admin user to our store
+    this.users.set(adminUser.id, adminUser);
+    this.usernameIndex.set(adminUser.username, adminUser.id);
+    this.emailIndex.set(adminUser.email, adminUser.id);
+    
+    // Also create a demo user for testing
+    const demoUser: User = {
+      id: this.nextUserId++,
+      username: "John Doe",
+      firstName: "John",
+      lastName: "Doe",
+      email: "demo@example.com",
+      password: "$2b$10$I8WF5KHSqJLWVUwUEXRZb.LNL35PwvXvrKjv0k0I1.zcO1QYvwj66", // "password"
+      role: "user",
+      // Contact information
+      phoneNumber: null,
+      alternateEmail: null,
+      emergencyContact: null,
+      emergencyPhone: null,
+      // Demographic information
+      memberLevel: null,
+      gender: null,
+      lgbtq2Status: null,
+      bipocStatus: null,
+      ethnicity: [],
+      location: null,
+      languages: [],
+      createdAt: new Date(),
+    };
+    
     this.users.set(demoUser.id, demoUser);
     this.usernameIndex.set(demoUser.username, demoUser.id);
     this.emailIndex.set(demoUser.email, demoUser.id);
