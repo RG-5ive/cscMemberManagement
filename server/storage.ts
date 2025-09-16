@@ -415,11 +415,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Database connectivity issues persist even with new credentials
+// Temporarily use MemStorage while database is being fixed
 import { MemStorage } from './memory-storage';
 
-// Export a MemStorage instance (database connectivity issues continue)
+// Export a MemStorage instance (temporary fix for database issues)
 export const storage = new MemStorage();
 
-// Database storage (enable when connectivity is resolved):
+// Once database is fixed, uncomment this line and comment the above:
 // export const storage = new DatabaseStorage();
