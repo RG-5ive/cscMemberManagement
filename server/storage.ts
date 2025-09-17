@@ -415,11 +415,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Neon control plane infrastructure issue - using memory storage temporarily
-import { MemStorage } from './memory-storage';
-
-// Export a MemStorage instance (Neon infrastructure problems persist)
-export const storage = new MemStorage();
-
-// Database storage (once Neon infrastructure is restored):
-// export const storage = new DatabaseStorage();
+// Export a DatabaseStorage instance
+export const storage = new DatabaseStorage();

@@ -69,7 +69,6 @@ export interface IStorage {
   
   // Member verification operations
   checkMemberExists(email: string, firstName: string, lastName: string): Promise<boolean>;
-  getMemberData(email: string, firstName: string, lastName: string): Promise<{ memberLevel: string | null } | null>;
 
   sessionStore: session.Store;
 }
@@ -124,14 +123,13 @@ export class MemStorage implements IStorage {
   }
 
   private createInitialUser() {
-    // Create your admin user with proper credentials
-    const adminUser: User = {
+    const demoUser: User = {
       id: this.nextUserId++,
-      username: "Rion Admin",
-      firstName: "Rion",
-      lastName: "Admin",
-      email: "rion.admin@csc.ca",
-      password: "f7ef7b74854dc630b663f0c9b6efc376ea35e1e88621583b14b2bb551aaf30b1d3c3ebf8abbb2e18060b5d2e12b1ef91e001b8c35fc9a61eb669713ae10c17a8.100902da485d419dbf25124d8c68c4f5", // 249JunK-C*
+      username: "John Doe",
+      firstName: "John",
+      lastName: "Doe",
+      email: "demo@example.com",
+      password: "$2b$10$I8WF5KHSqJLWVUwUEXRZb.LNL35PwvXvrKjv0k0I1.zcO1QYvwj66", // "password"
       role: "admin",
       // Contact information
       phoneNumber: null,
@@ -147,46 +145,9 @@ export class MemStorage implements IStorage {
       location: null,
       languages: [],
       createdAt: new Date(),
-      // Missing properties
-      canManageCommittees: true,
-      canManageWorkshops: true,
-      hasCompletedOnboarding: true,
     };
     
-    // Add the admin user to our store
-    this.users.set(adminUser.id, adminUser);
-    this.usernameIndex.set(adminUser.username, adminUser.id);
-    this.emailIndex.set(adminUser.email, adminUser.id);
-    
-    // Also create a demo user for testing
-    const demoUser: User = {
-      id: this.nextUserId++,
-      username: "John Doe",
-      firstName: "John",
-      lastName: "Doe",
-      email: "demo@example.com",
-      password: "$2b$10$I8WF5KHSqJLWVUwUEXRZb.LNL35PwvXvrKjv0k0I1.zcO1QYvwj66", // "password"
-      role: "user",
-      // Contact information
-      phoneNumber: null,
-      alternateEmail: null,
-      emergencyContact: null,
-      emergencyPhone: null,
-      // Demographic information
-      memberLevel: null,
-      gender: null,
-      lgbtq2Status: null,
-      bipocStatus: null,
-      ethnicity: [],
-      location: null,
-      languages: [],
-      createdAt: new Date(),
-      // Missing properties
-      canManageCommittees: false,
-      canManageWorkshops: false,
-      hasCompletedOnboarding: false,
-    };
-    
+    // Add the demo user to our store
     this.users.set(demoUser.id, demoUser);
     this.usernameIndex.set(demoUser.username, demoUser.id);
     this.emailIndex.set(demoUser.email, demoUser.id);
@@ -508,66 +469,6 @@ export class MemStorage implements IStorage {
       validName.toLowerCase() === fullName.toLowerCase() ||
       validName.toLowerCase().includes(firstName.toLowerCase()) && validName.toLowerCase().includes(lastName.toLowerCase())
     );
-  }
-
-  async getMemberData(email: string, firstName: string, lastName: string): Promise<{ memberLevel: string | null } | null> {
-    // For memory storage, return basic member data
-    const exists = await this.checkMemberExists(email, firstName, lastName);
-    if (!exists) {
-      return null;
-    }
-    
-    return { memberLevel: "Full" }; // Default member level for demo
-  }
-
-  // Message group operations - stub implementations for memory storage
-  async createMessageGroup(name: string, description: string | null, createdById: number): Promise<any> {
-    return { id: 1, name, description, createdById, createdAt: new Date(), updatedAt: new Date() };
-  }
-  
-  async getMessageGroups(): Promise<any[]> {
-    return [];
-  }
-  
-  async getMessageGroupById(groupId: number): Promise<any | undefined> {
-    return undefined;
-  }
-  
-  async updateMessageGroup(groupId: number, data: { name?: string, description?: string }): Promise<any> {
-    return { id: groupId, ...data, updatedAt: new Date() };
-  }
-  
-  async deleteMessageGroup(groupId: number): Promise<void> {
-    // No-op for memory storage
-  }
-  
-  async addMemberToGroup(groupId: number, memberId: number, addedById: number): Promise<any> {
-    return { id: 1, groupId, memberId, addedById, addedAt: new Date() };
-  }
-  
-  async removeMemberFromGroup(groupId: number, memberId: number): Promise<void> {
-    // No-op for memory storage
-  }
-  
-  async getGroupMembers(groupId: number): Promise<any[]> {
-    return [];
-  }
-  
-  async sendMessageToGroup(fromUserId: number, groupId: number, content: string): Promise<Message> {
-    const message = await this.createMessage({
-      fromUserId,
-      toUserId: null,
-      toGroupId: groupId,
-      content,
-      read: false,
-      filterCriteria: null
-    });
-    return message;
-  }
-  
-  async getMessagesForGroup(groupId: number): Promise<Message[]> {
-    // Return messages sent to this group
-    return Array.from(this.messages.values()).filter(m => m.toGroupId === groupId);
   }
 }
 

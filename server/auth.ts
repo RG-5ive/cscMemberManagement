@@ -333,9 +333,9 @@ export function setupAuth(app: Express) {
       }
 
       // Hash password
-      let hashedPassword: string;
+      let hashedPassword;
       try {
-        hashedPassword = await hashPassword(userData.password || "");
+        hashedPassword = await hashPassword(userData.password);
         console.log('Password hashed successfully');
       } catch (hashError) {
         console.error('Error hashing password:', hashError);
@@ -477,8 +477,8 @@ export function setupAuth(app: Express) {
           console.log(`User role ${user.role} (weight: ${userRoleWeight}) satisfies required role ${requiredRole} (weight: ${requiredRoleWeight})`);
         }
         // Permission flag check (even if role name doesn't match)
-        else if (committeeRolePermissions[requiredRole as keyof typeof committeeRolePermissions]) {
-          hasPermission = committeeRolePermissions[requiredRole as keyof typeof committeeRolePermissions].every((perm: string) => (user as any)[perm] === true);
+        else if (committeeRolePermissions[requiredRole]) {
+          hasPermission = committeeRolePermissions[requiredRole].every(perm => user[perm] === true);
           if (hasPermission) {
             console.log(`User has specific permissions satisfying ${requiredRole} requirement`);
           }

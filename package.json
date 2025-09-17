@@ -5,12 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push",
-    "import-users": "node import-users-csv.js",
-    "check-users": "node check-users.js"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@discordjs/rest": "^2.5.1",
