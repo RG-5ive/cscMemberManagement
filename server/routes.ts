@@ -1277,7 +1277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const { name, description } = req.body;
+      const { name, description, members: membersToAdd } = req.body;
       
       if (!name) {
         return res.status(400).json({ error: "Committee name is required" });
@@ -1299,8 +1299,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: description || null,
         })
         .returning();
+
+      // Add committee members if provided
+      const addedMembers = [];
+      if (membersToAdd && Array.isArray(membersToAdd) && membersToAdd.length > 0) {
+        for (const memberAssignment of membersToAdd) {
+          const { userId, roleId } = memberAssignment;
+          
+          if (!userId || !roleId) {
+            console.warn(`Skipping member assignment - missing userId (${userId}) or roleId (${roleId})`);
+            continue;
+          }
+
+          try {
+            // Find the member record by user ID
+            const [member] = await db.select()
+              .from(members)
+              .innerJoin(users, eq(users.email, members.email))
+              .where(eq(users.id, userId));
+
+            // Add member to committee
+            const [addedMember] = await db.insert(committeeMembers)
+              .values({
+                committeeId: committee.id,
+                userId: userId,
+                memberId: member?.members?.id || null,
+                roleId: roleId,
+                addedById: req.user.id,
+              })
+              .returning();
+
+            addedMembers.push(addedMember);
+          } catch (memberError) {
+            console.error(`Error adding member ${userId} to committee:`, memberError);
+            // Continue with other members even if one fails
+          }
+        }
+      }
       
-      res.status(201).json(committee);
+      res.status(201).json({
+        ...committee,
+        addedMembers: addedMembers.length
+      });
     } catch (error) {
       console.error("Error creating committee:", error);
       res.status(500).json({ error: (error as Error).message });
