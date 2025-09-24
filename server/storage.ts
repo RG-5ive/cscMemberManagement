@@ -91,7 +91,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(userData).returning();
+    // Ensure required fields are present
+    if (!userData.username || !userData.email || !userData.password) {
+      throw new Error("Username, email, and password are required");
+    }
+    
+    // Create user with default values for missing optional fields
+    const userInsertData = {
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role || "user",
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      phoneNumber: userData.phoneNumber || null,
+      alternateEmail: userData.alternateEmail || null,
+      emergencyContact: userData.emergencyContact || null,
+      emergencyPhone: userData.emergencyPhone || null,
+      memberLevel: userData.memberLevel || null,
+      gender: userData.gender || null,
+      lgbtq2Status: userData.lgbtq2Status || null,
+      bipocStatus: userData.bipocStatus || null,
+      ethnicity: userData.ethnicity || [],
+      location: userData.location || null,
+      languages: userData.languages || [],
+      canManageCommittees: userData.canManageCommittees || (userData.role === "admin" || userData.role === "committee_chair"),
+      canManageWorkshops: userData.canManageWorkshops || (userData.role === "admin" || userData.role === "committee_chair" || userData.role === "committee_cochair"),
+      hasCompletedOnboarding: userData.hasCompletedOnboarding || false,
+    };
+    
+    const [user] = await db.insert(users).values(userInsertData).returning();
     return user;
   }
 
