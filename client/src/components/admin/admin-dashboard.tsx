@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { Workshop } from '@shared/schema';
 import { Link } from 'wouter';
-import { BarChart3, Calendar, AlertTriangle, MessageSquare } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, MessageSquare, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { EnhancedCalendar } from '@/components/ui/enhanced-calendar';
 import { DiscordManagement } from './discord-management';
@@ -88,7 +88,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Quick Access Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Member Statistics Card */}
         <div className="border-4 border-blue-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
           <Card className="border-0">
@@ -114,6 +114,37 @@ export function AdminDashboard() {
                 <Link href="/member-statistics">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Member Statistics
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* View All Members Card */}
+        <div className="border-4 border-orange-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="border-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <Users className="h-6 w-6 text-orange-600" />
+                View All Members
+              </CardTitle>
+              <CardDescription className="font-medium">
+                Browse complete member directory with search, filter, and management tools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-2xl font-bold text-orange-600">
+                  {displayStats.totalMembers} Records
+                </div>
+                <div className="text-sm text-muted-foreground font-medium">
+                  Full Database
+                </div>
+              </div>
+              <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
+                <Link href="/admin/members">
+                  <Users className="h-4 w-4 mr-2" />
+                  View All Members
                 </Link>
               </Button>
             </CardContent>
