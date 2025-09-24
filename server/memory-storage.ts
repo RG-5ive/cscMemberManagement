@@ -144,6 +144,10 @@ export class MemStorage implements IStorage {
       ethnicity: [],
       location: null,
       languages: [],
+      // Required permission fields
+      canManageCommittees: true,
+      canManageWorkshops: true,
+      hasCompletedOnboarding: true,
       createdAt: new Date(),
     };
     
@@ -210,6 +214,17 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    // Validate required fields
+    if (!userData.username) {
+      throw new Error("Username is required");
+    }
+    if (!userData.email) {
+      throw new Error("Email is required");
+    }
+    if (!userData.password) {
+      throw new Error("Password is required");
+    }
+    
     // Check if username already exists
     if (this.usernameIndex.has(userData.username)) {
       throw new Error("Username already exists");
@@ -241,6 +256,10 @@ export class MemStorage implements IStorage {
       ethnicity: [],
       location: null,
       languages: [],
+      // Required permission fields
+      canManageCommittees: userData.role === "admin" || userData.role === "committee_chair",
+      canManageWorkshops: userData.role === "admin" || userData.role === "committee_chair" || userData.role === "committee_cochair",
+      hasCompletedOnboarding: false,
       createdAt: new Date(),
     };
     
@@ -469,6 +488,53 @@ export class MemStorage implements IStorage {
       validName.toLowerCase() === fullName.toLowerCase() ||
       validName.toLowerCase().includes(firstName.toLowerCase()) && validName.toLowerCase().includes(lastName.toLowerCase())
     );
+  }
+
+  // Message group operations - stub implementations
+  async createMessageGroup(name: string, description: string | null, createdById: number): Promise<any> {
+    return { id: 1, name, description, createdById, createdAt: new Date() };
+  }
+
+  async getMessageGroups(): Promise<any[]> {
+    return [];
+  }
+
+  async getMessageGroupById(groupId: number): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async updateMessageGroup(groupId: number, data: { name?: string, description?: string }): Promise<any> {
+    return { id: groupId, ...data };
+  }
+
+  async deleteMessageGroup(groupId: number): Promise<void> {
+    // Stub implementation
+  }
+
+  async addMemberToGroup(groupId: number, memberId: number, addedById: number): Promise<any> {
+    return { groupId, memberId, addedById, addedAt: new Date() };
+  }
+
+  async removeMemberFromGroup(groupId: number, memberId: number): Promise<void> {
+    // Stub implementation
+  }
+
+  async getGroupMembers(groupId: number): Promise<any[]> {
+    return [];
+  }
+
+  async sendMessageToGroup(fromUserId: number, groupId: number, content: string): Promise<Message> {
+    return this.createMessage({
+      fromUserId,
+      toUserId: 0, // Group message
+      content,
+      type: "text",
+      read: false
+    });
+  }
+
+  async getMessagesForGroup(groupId: number): Promise<Message[]> {
+    return [];
   }
 }
 
