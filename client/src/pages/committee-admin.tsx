@@ -72,11 +72,11 @@ export default function CommitteeAdminPage() {
   });
 
   // Filter committees where user is chair or co-chair
-  const userCommittees = userCommitteeRoles?.filter(
+  const userCommittees = Array.isArray(userCommitteeRoles) ? userCommitteeRoles.filter(
     (membership: { role: { name: string } }) => 
       membership.role.name === 'Chair' || 
       membership.role.name === 'Co-Chair'
-  );
+  ) : [];
 
   // Update committee description mutation
   const updateCommitteeMutation = useMutation({
@@ -114,7 +114,7 @@ export default function CommitteeAdminPage() {
 
   // Handle URL parameter for committee selection and set initial committee
   useEffect(() => {
-    if (targetCommitteeId && userCommitteeRoles) {
+    if (targetCommitteeId && Array.isArray(userCommitteeRoles)) {
       // Check if user has access to the requested committee
       const hasAccess = userCommitteeRoles.some((membership: any) => {
         const committeeId = membership.committeeId;
