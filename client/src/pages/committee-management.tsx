@@ -14,14 +14,35 @@ import { CommitteeMembersManager } from "@/components/admin/committee-members-ma
 import { Redirect } from "wouter";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, UserPlus, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Committee {
   id: number;
   name: string;
   description: string | null;
   createdAt: string;
+}
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
+interface CommitteeRole {
+  id: number;
+  name: string;
+  description: string | null;
+}
+
+interface MemberAssignment {
+  userId: number;
+  roleId: number;
+  userName?: string;
+  roleName?: string;
 }
 
 export default function CommitteeManagementPage() {
@@ -34,6 +55,7 @@ export default function CommitteeManagementPage() {
     name: "",
     description: ""
   });
+  const [memberAssignments, setMemberAssignments] = useState<MemberAssignment[]>([]);
   const [editCommittee, setEditCommittee] = useState<Committee | null>(null);
   const [committeeToDelete, setCommitteeToDelete] = useState<Committee | null>(null);
   const [selectedCommitteeId, setSelectedCommitteeId] = useState<number | null>(null);
@@ -44,10 +66,22 @@ export default function CommitteeManagementPage() {
     queryKey: ["/api/committees"],
   });
 
+  // Fetch users for member assignment
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
+    enabled: isCreateDialogOpen,
+  });
+
+  // Fetch committee roles for role assignment
+  const { data: committeeRoles } = useQuery({
+    queryKey: ["/api/committee-roles"],
+    enabled: isCreateDialogOpen,
+  });
+
   // Create committee mutation
   const createCommitteeMutation = useMutation({
-    mutationFn: async (committee: typeof newCommittee) => {
-      const res = await apiRequest("POST", "/api/committees", committee);
+    mutationFn: async (committeeData: typeof newCommittee & { members?: MemberAssignment[] }) => {
+      const res = await apiRequest("POST", "/api/committees", committeeData);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || "Failed to create committee");
@@ -58,11 +92,12 @@ export default function CommitteeManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/committees"] });
       setIsCreateDialogOpen(false);
       setNewCommittee({ name: "", description: "" });
+      setMemberAssignments([]);
       setSelectedCommitteeId(committee.id);
       setActiveTab("members");
       toast({
         title: "Committee created",
-        description: "The committee has been created successfully."
+        description: `Committee created successfully${committee.addedMembers ? ` with ${committee.addedMembers} member(s)` : ''}.`
       });
     },
     onError: (error: Error) => {
@@ -141,6 +176,38 @@ export default function CommitteeManagementPage() {
     }
   });
 
+  // Add member assignment
+  const addMemberAssignment = () => {
+    setMemberAssignments([...memberAssignments, { userId: 0, roleId: 0 }]);
+  };
+
+  // Remove member assignment
+  const removeMemberAssignment = (index: number) => {
+    setMemberAssignments(memberAssignments.filter((_, i) => i !== index));
+  };
+
+  // Update member assignment
+  const updateMemberAssignment = (index: number, field: 'userId' | 'roleId', value: number) => {
+    const updated = [...memberAssignments];
+    updated[index][field] = value;
+    
+    // Update display names for better UX
+    if (field === 'userId' && users) {
+      const user = Array.isArray(users) ? users.find((u: User) => u.id === value) : null;
+      if (user) {
+        updated[index].userName = user.username;
+      }
+    }
+    if (field === 'roleId' && committeeRoles) {
+      const role = Array.isArray(committeeRoles) ? committeeRoles.find((r: CommitteeRole) => r.id === value) : null;
+      if (role) {
+        updated[index].roleName = role.name;
+      }
+    }
+    
+    setMemberAssignments(updated);
+  };
+
   // Handle create committee
   const handleCreateCommittee = () => {
     if (!newCommittee.name.trim()) {
@@ -152,7 +219,16 @@ export default function CommitteeManagementPage() {
       return;
     }
 
-    createCommitteeMutation.mutate(newCommittee);
+    const validAssignments = memberAssignments.filter(assignment => 
+      assignment.userId > 0 && assignment.roleId > 0
+    );
+    
+    const committeeData = {
+      ...newCommittee,
+      members: validAssignments.length > 0 ? validAssignments : undefined
+    };
+    
+    createCommitteeMutation.mutate(committeeData);
   };
   
   // Handle edit committee
@@ -361,6 +437,92 @@ export default function CommitteeManagementPage() {
                 onChange={(e) => setNewCommittee({ ...newCommittee, description: e.target.value })}
                 placeholder="Describe the committee's purpose and responsibilities"
               />
+            </div>
+
+            {/* Member Assignment Section */}
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Committee Members (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addMemberAssignment}
+                  data-testid="button-add-member"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Member
+                </Button>
+              </div>
+
+              {memberAssignments.length > 0 && (
+                <div className="space-y-3">
+                  {memberAssignments.map((assignment, index) => (
+                    <Card key={index} className="p-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        <div className="grid gap-2">
+                          <Label htmlFor={`user-${index}`}>Member</Label>
+                          <Select
+                            value={assignment.userId.toString()}
+                            onValueChange={(value) => updateMemberAssignment(index, 'userId', parseInt(value))}
+                          >
+                            <SelectTrigger data-testid={`select-user-${index}`}>
+                              <SelectValue placeholder="Select a member" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {users && Array.isArray(users) && users.map((user: User) => (
+                                <SelectItem key={user.id} value={user.id.toString()}>
+                                  {user.username} ({user.email})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor={`role-${index}`}>Role</Label>
+                          <Select
+                            value={assignment.roleId.toString()}
+                            onValueChange={(value) => updateMemberAssignment(index, 'roleId', parseInt(value))}
+                          >
+                            <SelectTrigger data-testid={`select-role-${index}`}>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {committeeRoles && Array.isArray(committeeRoles) && committeeRoles.map((role: CommitteeRole) => (
+                                <SelectItem key={role.id} value={role.id.toString()}>
+                                  {role.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeMemberAssignment(index)}
+                            data-testid={`button-remove-member-${index}`}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {memberAssignments.length === 0 && (
+                <div className="text-center p-4 border rounded-md bg-muted/50">
+                  <p className="text-sm text-muted-foreground">
+                    No members assigned yet. Click "Add Member" to assign members to this committee.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
