@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { MailService } from '@sendgrid/mail';
 import { log } from './vite';
 
 // Store sent emails for development access
@@ -19,65 +20,17 @@ export const mockEmails: MockEmail[] = [];
 let transporter: nodemailer.Transporter;
 let isUsingMockTransport = false;
 
-// For development, create a mock nodemailer transport that doesn't actually send emails
-// but stores them in the mockEmails array and logs them
-if (process.env.NODE_ENV !== 'production') {
-  isUsingMockTransport = true;
-  
-  // Create a mock transport that simulates sending but doesn't actually send
-  transporter = {
-    sendMail: async (mailOptions: any) => {
-      // Extract the verification code from the HTML if it exists
-      // The regex needs to handle whitespace between the div tags and content
-      const codeMatch = mailOptions.html?.match(/<div[^>]*>\s*(\d{7})\s*<\/div>/);
-      const verificationCode = codeMatch ? codeMatch[1] : undefined;
-      
-      // Log the regex matching attempt for debugging
-      console.log("Mail HTML code extraction:", { 
-        hasHtml: !!mailOptions.html,
-        match: codeMatch,
-        extractedCode: verificationCode
-      });
-      
-      // Store the email in our mock storage
-      const mockEmail: MockEmail = {
-        to: mailOptions.to,
-        from: mailOptions.from,
-        subject: mailOptions.subject,
-        html: mailOptions.html,
-        text: mailOptions.text,
-        sentAt: new Date(),
-        code: verificationCode
-      };
-      
-      mockEmails.push(mockEmail);
-      
-      // Log the mock email being "sent"
-      log(`[MOCK EMAIL] To: ${mailOptions.to}`, 'mail');
-      log(`[MOCK EMAIL] Subject: ${mailOptions.subject}`, 'mail');
-      if (verificationCode) {
-        log(`[MOCK EMAIL] Verification Code: ${verificationCode}`, 'mail');
-      }
-      
-      // Return a fake success response
-      return {
-        messageId: `mock-email-${Date.now()}@localhost`,
-        envelope: {
-          from: mailOptions.from,
-          to: [mailOptions.to]
-        },
-        accepted: [mailOptions.to],
-        rejected: [],
-        pending: [],
-        response: '250 OK: Message accepted'
-      };
-    },
-    verify: async () => true // Always verify successfully for the mock transport
-  } as any; // Type assertion since we're only implementing the methods we need
-  
-  log('Using mock email transport for development - emails will be logged but not sent', 'mail');
+// Initialize SendGrid if API key is available
+let mailService: MailService | null = null;
+let usingSendGrid = false;
+
+if (process.env.SENDGRID_API_KEY) {
+  mailService = new MailService();
+  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+  usingSendGrid = true;
+  log('Using SendGrid email service - emails will be sent', 'mail');
 } else {
-  // For production, use real SMTP settings
+  // Fallback to SMTP if SendGrid is not configured
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -87,14 +40,24 @@ if (process.env.NODE_ENV !== 'production') {
       pass: process.env.EMAIL_PASS,
     },
   });
+  log('Using SMTP email transport - emails will be sent', 'mail');
 }
 
-// Verify the transporter configuration on startup
-async function verifyTransporter() {
+// Verify the email service configuration on startup
+async function verifyEmailService() {
   try {
-    await transporter.verify();
-    log('Email service is ready to send messages', 'mail');
-    return true;
+    if (usingSendGrid && mailService) {
+      // SendGrid doesn't need verification, just check if API key is set
+      log('SendGrid email service is ready to send messages', 'mail');
+      return true;
+    } else if (transporter) {
+      await transporter.verify();
+      log('SMTP email service is ready to send messages', 'mail');
+      return true;
+    } else {
+      log('No email service configured', 'mail');
+      return false;
+    }
   } catch (error) {
     log(`Email service configuration error: ${error}`, 'mail');
     return false;
@@ -103,7 +66,7 @@ async function verifyTransporter() {
 
 // Initialize the email service
 export async function initializeMailService() {
-  return await verifyTransporter();
+  return await verifyEmailService();
 }
 
 // Send verification email with code
@@ -114,9 +77,9 @@ export async function sendVerificationEmail(
   code: string
 ) {
   try {
-    const mailOptions = {
-      from: process.env.EMAIL_FROM,
+    const emailContent = {
       to: email,
+      from: process.env.EMAIL_FROM || 'noreply@csc.ca',
       subject: 'CSC Member Portal Registration Verification Code',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -133,9 +96,22 @@ export async function sendVerificationEmail(
       `,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    log(`Verification email sent: ${info.messageId}`, 'mail');
-    return true;
+    if (usingSendGrid && mailService) {
+      // Use SendGrid
+      await mailService.send(emailContent);
+      log(`SendGrid verification email sent to: ${email}`, 'mail');
+      log(`Verification code for ${email}: ${code}`, 'mail');
+      return true;
+    } else if (transporter) {
+      // Use SMTP
+      const info = await transporter.sendMail(emailContent);
+      log(`SMTP verification email sent: ${info.messageId}`, 'mail');
+      log(`Verification code for ${email}: ${code}`, 'mail');
+      return true;
+    } else {
+      log('No email service available', 'mail');
+      return false;
+    }
   } catch (error) {
     log(`Error sending verification email: ${error}`, 'mail');
     return false;
