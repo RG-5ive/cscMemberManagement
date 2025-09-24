@@ -125,7 +125,7 @@ export default function Dashboard() {
             {user?.role === "admin" || user?.username?.includes(".admin@csc.ca") ? (
               // Admin Dashboard with Quick Access Cards
               <AdminDashboard />
-            ) : isAdminRoute && user?.role === "admin" ? (
+            ) : isAdminRoute ? (
               // Fallback Admin Dashboard
               <div>
                 <div className="mb-4 sm:mb-6">
