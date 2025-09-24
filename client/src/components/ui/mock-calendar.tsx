@@ -148,7 +148,12 @@ export function MockCalendar({ readOnly = false }: CalendarProps) {
       location: newEvent.location,
       type: newEvent.type,
       attendees: newEvent.attendees,
-      createdBy: user?.id || 0
+      createdBy: user?.id || 0,
+      visibleToGeneralMembers: false,
+      visibleToCommitteeChairs: true,
+      visibleToAdmins: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     // Note: This is legacy code - events should be saved via API
