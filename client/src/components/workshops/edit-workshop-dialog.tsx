@@ -87,7 +87,7 @@ export default function EditWorkshopDialog({
         description: workshop.description,
         date: workshopDate,
         time: timeString,
-        location: workshop.location_address || "",
+        location: workshop.locationAddress || "",
         capacity: workshop.capacity,
       });
     }
@@ -107,7 +107,7 @@ export default function EditWorkshopDialog({
         title: values.title,
         description: values.description,
         date: combinedDateTime.toISOString(),
-        location_address: values.location,
+        locationAddress: values.location,
         capacity: values.capacity,
       };
 
