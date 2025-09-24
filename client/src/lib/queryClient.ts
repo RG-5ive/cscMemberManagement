@@ -33,10 +33,17 @@ export async function apiRequest(
   try {
     console.log(`Making ${method} request to ${url}`);
     
-    // Prepare headers for session-based auth
+    // Prepare headers for session-based auth with token fallback
     const headers: HeadersInit = {};
     if (data && method !== 'GET') {
       headers["Content-Type"] = "application/json";
+    }
+    
+    // Add auth token if available as fallback
+    const authToken = getAuthToken();
+    if (authToken) {
+      console.log(`Auth token found in storage, adding to request`);
+      headers['Authorization'] = `Bearer ${authToken}`;
     }
     
     const res = await fetch(url, {
