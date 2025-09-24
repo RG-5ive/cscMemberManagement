@@ -606,6 +606,10 @@ export class CSCDiscordBot {
     await this.client.destroy();
   }
 
+  isConnected(): boolean {
+    return this.client?.isReady() || false;
+  }
+
   // Web app integration methods
   async createChannelFromWeb(guildId: string, name: string, type: string, description?: string) {
     const guild = this.client.guilds.cache.get(guildId);

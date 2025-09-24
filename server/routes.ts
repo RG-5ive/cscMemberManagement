@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/discord/status", requireAuth, async (req, res) => {
     try {
       const bot = getDiscordBot();
-      const isConnected = bot.client?.isReady() || false;
+      const isConnected = bot.isConnected();
       res.json({ connected: isConnected });
     } catch (error) {
       res.json({ connected: false, error: "Bot not initialized" });

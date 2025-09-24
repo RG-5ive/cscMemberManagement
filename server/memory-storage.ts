@@ -526,10 +526,11 @@ export class MemStorage implements IStorage {
   async sendMessageToGroup(fromUserId: number, groupId: number, content: string): Promise<Message> {
     return this.createMessage({
       fromUserId,
-      toUserId: 0, // Group message
+      toUserId: null,
+      toGroupId: groupId,
       content,
-      type: "text",
-      read: false
+      read: false,
+      filterCriteria: null
     });
   }
 
