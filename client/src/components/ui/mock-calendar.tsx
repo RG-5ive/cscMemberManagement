@@ -21,7 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 // Helper functions for event creation and management
 const handleCreateEvent = async (eventData: any, userId: number) => {
   try {
-    await apiRequest('/api/calendar-events', 'POST', {
+    await apiRequest('POST', '/api/calendar-events', {
       ...eventData,
       date: eventData.date.toISOString(),
       createdBy: userId
@@ -35,7 +35,7 @@ const handleCreateEvent = async (eventData: any, userId: number) => {
 
 const handleUpdateEventVisibility = async (eventId: number, visibility: any) => {
   try {
-    await apiRequest(`/api/calendar-events/${eventId}/visibility`, 'PATCH', visibility);
+    await apiRequest('PATCH', `/api/calendar-events/${eventId}/visibility`, visibility);
     return true;
   } catch (error) {
     console.error('Error updating event visibility:', error);
@@ -45,7 +45,7 @@ const handleUpdateEventVisibility = async (eventId: number, visibility: any) => 
 
 const handleDeleteEvent = async (eventId: number) => {
   try {
-    await apiRequest(`/api/calendar-events/${eventId}`, 'DELETE');
+    await apiRequest('DELETE', `/api/calendar-events/${eventId}`);
     return true;
   } catch (error) {
     console.error('Error deleting event:', error);
@@ -58,8 +58,6 @@ interface CalendarProps {
 }
 
 export function MockCalendar({ readOnly = false }: CalendarProps) {
-  // Legacy component - now using EnhancedCalendar
-  return null;
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -82,25 +80,25 @@ export function MockCalendar({ readOnly = false }: CalendarProps) {
   const isAdmin = user?.role === 'admin';
 
   // Fetch calendar events from API
-  const { data: calendarEvents = [], isLoading: isLoadingEvents } = useQuery({
+  const { data: calendarEvents = [], isLoading: isLoadingEvents } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/calendar-events"],
   });
 
   // Fetch workshops to display in calendar
-  const { data: workshops = [] } = useQuery({
+  const { data: workshops = [] } = useQuery<any[]>({
     queryKey: ["/api/workshops"],
   });
 
   // Transform database events to calendar format
   const events: CalendarEvent[] = [
     // Calendar events from database
-    ...calendarEvents.map((event: any) => ({
+    ...(calendarEvents as CalendarEvent[]).map((event: any) => ({
       ...event,
       date: new Date(event.date),
       id: event.id.toString()
     })),
     // Workshop events
-    ...workshops.map((workshop: any) => ({
+    ...(workshops as any[]).map((workshop: any) => ({
       id: `workshop-${workshop.id}`,
       title: workshop.title,
       description: workshop.description || '',
@@ -112,28 +110,6 @@ export function MockCalendar({ readOnly = false }: CalendarProps) {
       createdBy: 'system'
     }))
   ];
-
-  useEffect(() => {
-    const combinedEvents = [...mockEvents, ...localEvents];
-    
-    // Add workshops as calendar events
-    if (workshops) {
-      const workshopEvents = workshops.map((workshop: any) => ({
-        id: `workshop-${workshop.id}`,
-        title: workshop.title,
-        description: workshop.description || 'Workshop event',
-        date: workshop.date ? parseISO(workshop.date) : new Date(),
-        time: workshop.time || '9:00 AM',
-        location: workshop.location || 'TBD',
-        type: 'workshop' as const,
-        attendees: workshop.registrations ? [`${workshop.registrations.length} registered`] : [],
-        createdBy: 'system'
-      }));
-      combinedEvents.push(...workshopEvents);
-    }
-
-    setEvents(combinedEvents);
-  }, [workshops, localEvents]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -164,18 +140,20 @@ export function MockCalendar({ readOnly = false }: CalendarProps) {
     }
 
     const event: CalendarEvent = {
-      id: Date.now().toString(),
+      id: Date.now(),
       title: newEvent.title,
       description: newEvent.description,
       date: selectedDate,
       time: newEvent.time,
       location: newEvent.location,
       type: newEvent.type,
-      createdBy: user?.username || 'unknown'
+      attendees: newEvent.attendees,
+      createdBy: user?.id || 0
     };
 
-    setLocalEvents([...localEvents, event]);
-    setNewEvent({ title: '', description: '', time: '', location: '', type: 'meeting' });
+    // Note: This is legacy code - events should be saved via API
+    // For now, just show success message
+    setNewEvent({ title: '', description: '', time: '', location: '', type: 'meeting', date: new Date(), attendees: [] });
     setShowAddEvent(false);
     
     toast({
@@ -185,7 +163,7 @@ export function MockCalendar({ readOnly = false }: CalendarProps) {
   };
 
   const resetNewEvent = () => {
-    setNewEvent({ title: '', description: '', time: '', location: '', type: 'meeting' });
+    setNewEvent({ title: '', description: '', time: '', location: '', type: 'meeting', date: new Date(), attendees: [] });
   };
 
   return (
