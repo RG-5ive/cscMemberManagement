@@ -10,6 +10,7 @@ vite.config.ts.*
 .env.local
 .env.production
 .env.staging
+.env.example
 *.env
 
 # Database files
