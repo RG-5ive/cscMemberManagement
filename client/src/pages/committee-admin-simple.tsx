@@ -19,8 +19,7 @@ export default function CommitteeAdminSimple() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/committee-admin");
   
-  const targetCommitteeId = params?.committee ? parseInt(params.committee) : 
-    new URLSearchParams(window.location.search).get('committee') ? 
+  const targetCommitteeId = new URLSearchParams(window.location.search).get('committee') ? 
     parseInt(new URLSearchParams(window.location.search).get('committee')!) : null;
 
   const [selectedCommitteeId, setSelectedCommitteeId] = useState<number | null>(targetCommitteeId);
@@ -97,7 +96,7 @@ export default function CommitteeAdminSimple() {
       time: eventForm.time,
       duration: eventForm.duration,
       location: eventForm.location,
-      type: eventForm.type,
+      type: eventForm.type as "meeting" | "workshop" | "event",
       attendees: Math.floor(Math.random() * 15) + 3 // Mock attendee count
     };
 
@@ -149,8 +148,8 @@ export default function CommitteeAdminSimple() {
   }
 
   // Find selected committee info
-  const selectedCommittee = allCommittees?.find((c: any) => c.id === selectedCommitteeId);
-  const userRole = userCommitteeRoles?.find((role: any) => role.committeeId === selectedCommitteeId);
+  const selectedCommittee = Array.isArray(allCommittees) ? allCommittees.find((c: any) => c.id === selectedCommitteeId) : null;
+  const userRole = Array.isArray(userCommitteeRoles) ? userCommitteeRoles.find((role: any) => role.committeeId === selectedCommitteeId) : null;
 
   return (
     <div className="container mx-auto p-6">
