@@ -310,6 +310,9 @@ export function setupAuth(app: Express) {
 
       // Check existing username
       try {
+        if (!userData.username) {
+          return res.status(400).json({ error: "Username is required" });
+        }
         const existingUser = await storage.getUserByUsername(userData.username);
         if (existingUser) {
           console.log('Username already exists:', userData.username);
@@ -322,6 +325,9 @@ export function setupAuth(app: Express) {
 
       // Check existing email
       try {
+        if (!userData.email) {
+          return res.status(400).json({ error: "Email is required" });
+        }
         const existingEmail = await storage.getUserByEmail(userData.email);
         if (existingEmail) {
           console.log('Email already exists:', userData.email);
@@ -335,6 +341,9 @@ export function setupAuth(app: Express) {
       // Hash password
       let hashedPassword;
       try {
+        if (!userData.password) {
+          return res.status(400).json({ error: "Password is required" });
+        }
         hashedPassword = await hashPassword(userData.password);
         console.log('Password hashed successfully');
       } catch (hashError) {
@@ -477,8 +486,9 @@ export function setupAuth(app: Express) {
           console.log(`User role ${user.role} (weight: ${userRoleWeight}) satisfies required role ${requiredRole} (weight: ${requiredRoleWeight})`);
         }
         // Permission flag check (even if role name doesn't match)
-        else if (committeeRolePermissions[requiredRole]) {
-          hasPermission = committeeRolePermissions[requiredRole].every(perm => user[perm] === true);
+        else if (requiredRole in committeeRolePermissions) {
+          const permissions = committeeRolePermissions[requiredRole as keyof typeof committeeRolePermissions];
+          hasPermission = permissions.every((perm: string) => (user as any)[perm] === true);
           if (hasPermission) {
             console.log(`User has specific permissions satisfying ${requiredRole} requirement`);
           }
