@@ -248,7 +248,8 @@ export default function CommitteeManagementPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
-              {committees && Array.isArray(committees) && committees.map((committee: Committee) => (
+              {committees && Array.isArray(committees) && committees.map((committee: Committee) => {
+                return (
                 <Card key={committee.id} className="hover:bg-accent/5 transition-colors">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -291,7 +292,8 @@ export default function CommitteeManagementPage() {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
 
               {(!committees || !Array.isArray(committees) || committees.length === 0) && (
                 <div className="col-span-2 text-center p-8 border rounded-md">
