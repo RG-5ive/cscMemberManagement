@@ -93,24 +93,24 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
   const searchDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch committee data
-  const { data: committeeData, isLoading: isCommitteeLoading } = useQuery({
+  const { data: committeeData, isLoading: isCommitteeLoading } = useQuery<Committee>({
     queryKey: ["/api/committees", committeeId],
     enabled: !!committeeId,
   });
 
   // Fetch committee members
-  const { data: members, isLoading: isMembersLoading, error: membersError } = useQuery({
+  const { data: members, isLoading: isMembersLoading, error: membersError } = useQuery<CommitteeMember[]>({
     queryKey: [`/api/committees/${committeeId}/members`],
     enabled: !!committeeId,
   });
 
   // Fetch committee roles
-  const { data: roles, isLoading: isRolesLoading } = useQuery({
+  const { data: roles, isLoading: isRolesLoading } = useQuery<CommitteeRole[]>({
     queryKey: ["/api/committee-roles"],
   });
 
   // Fetch all users for reference
-  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+  const { data: usersData, isLoading: isUsersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
@@ -656,7 +656,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                     {usersData.find((u: User) => u.id === newMember.userId)?.email || ''}
                   </div>
                 </div>
-              )}
+              ) as React.ReactNode}
             </div>
 
             <div className="grid gap-2">
@@ -669,7 +669,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles && Array.isArray(roles) && roles
+                  {(roles && Array.isArray(roles) && roles
                     .filter((role: CommitteeRole) => {
                       // Non-admin users can't assign Chair or Co-Chair roles
                       if (!isAdmin && (role.name === 'Chair' || role.name === 'Co-Chair')) {
@@ -682,7 +682,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                         {role.name}
                       </SelectItem>
                     ))
-                  }
+                  ) as React.ReactNode}
                 </SelectContent>
               </Select>
             </div>
@@ -797,7 +797,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                   value={selectedMember.role.id.toString()}
                   onValueChange={(value) => {
                     const roleId = parseInt(value);
-                    const role = roles.find((r: CommitteeRole) => r.id === roleId);
+                    const role = (roles as CommitteeRole[])?.find((r: CommitteeRole) => r.id === roleId);
                     if (role) {
                       setSelectedMember({
                         ...selectedMember,
@@ -810,7 +810,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles && Array.isArray(roles) && roles
+                    {(roles && Array.isArray(roles) && roles
                       .filter((role: CommitteeRole) => {
                         // Non-admin users can't assign Chair or Co-Chair roles
                         if (!isAdmin && (role.name === 'Chair' || role.name === 'Co-Chair')) {
@@ -823,7 +823,7 @@ export function CommitteeMembersManager({ committeeId, committeeName }: Committe
                           {role.name}
                         </SelectItem>
                       ))
-                    }
+                    ) as React.ReactNode}
                   </SelectContent>
                 </Select>
               </div>
