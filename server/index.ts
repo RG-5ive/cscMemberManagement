@@ -4,8 +4,11 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeMailService } from "./mail-service";
 
 const app = express();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+app.get("/ping", (_req, res) => res.send("pong"));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -41,7 +44,7 @@ app.use((req, res, next) => {
   // Initialize mail service
   const mailServiceReady = await initializeMailService();
   if (!mailServiceReady) {
-    log('Warning: Email service not properly configured', 'mail');
+    log("Warning: Email service not properly configured", "mail");
   }
 
   const server = await registerRoutes(app);
@@ -66,12 +69,11 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
+  // ALWAYS serve the app on port 5000
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  const host = process.env.HOST ?? "0.0.0.0"; // change to "127.0.0.1" if needed
+
+  server.listen(port, host, () => {
+    log(`serving on http://${host}:${port}`);
   });
 })();
