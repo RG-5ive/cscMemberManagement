@@ -383,21 +383,132 @@ export default function MemberStatisticsPage() {
     '#f43f5e', // rose
   ];
 
-  // Combine all selected demographics into one comparison array
-  const allSelectedDemographics = [
-    ...selectedEthnicities.map(e => ({ type: 'ethnicity', value: e, label: e })),
-    ...selectedGenders.map(g => ({ type: 'gender', value: g, label: g })),
-    ...selectedCategories.map(c => ({ type: 'category', value: c, label: c })),
-    ...selectedBipocStatuses.map(b => ({ type: 'bipoc', value: b, label: `BIPOC: ${b}` })),
-    ...selectedLgbtqStatuses.map(l => ({ type: 'lgbtq', value: l, label: `LGBTQ2+: ${l}` })),
-  ];
+  // Create intersections of selected demographics
+  const createIntersections = () => {
+    const intersections: Array<{
+      label: string;
+      filters: Array<{ type: string; value: string }>;
+    }> = [];
 
-  // Calculate comparison data for all selected demographics
+    // Start with a base of all members
+    let currentGroups = [{ label: '', filters: [] as Array<{ type: string; value: string }> }];
+
+    // Add ethnicity intersections
+    if (selectedEthnicities.length > 0) {
+      const newGroups: typeof currentGroups = [];
+      for (const group of currentGroups) {
+        for (const ethnicity of selectedEthnicities) {
+          newGroups.push({
+            label: group.label ? `${group.label} + ${ethnicity}` : ethnicity,
+            filters: [...group.filters, { type: 'ethnicity', value: ethnicity }]
+          });
+        }
+      }
+      currentGroups = newGroups;
+    }
+
+    // Add gender intersections
+    if (selectedGenders.length > 0) {
+      const newGroups: typeof currentGroups = [];
+      for (const group of currentGroups) {
+        for (const gender of selectedGenders) {
+          newGroups.push({
+            label: group.label ? `${group.label} + ${gender}` : gender,
+            filters: [...group.filters, { type: 'gender', value: gender }]
+          });
+        }
+      }
+      currentGroups = newGroups;
+    }
+
+    // Add category intersections
+    if (selectedCategories.length > 0) {
+      const newGroups: typeof currentGroups = [];
+      for (const group of currentGroups) {
+        for (const category of selectedCategories) {
+          newGroups.push({
+            label: group.label ? `${group.label} + ${category}` : category,
+            filters: [...group.filters, { type: 'category', value: category }]
+          });
+        }
+      }
+      currentGroups = newGroups;
+    }
+
+    // Add BIPOC intersections
+    if (selectedBipocStatuses.length > 0) {
+      const newGroups: typeof currentGroups = [];
+      for (const group of currentGroups) {
+        for (const status of selectedBipocStatuses) {
+          newGroups.push({
+            label: group.label ? `${group.label} + BIPOC:${status}` : `BIPOC:${status}`,
+            filters: [...group.filters, { type: 'bipoc', value: status }]
+          });
+        }
+      }
+      currentGroups = newGroups;
+    }
+
+    // Add LGBTQ2+ intersections
+    if (selectedLgbtqStatuses.length > 0) {
+      const newGroups: typeof currentGroups = [];
+      for (const group of currentGroups) {
+        for (const status of selectedLgbtqStatuses) {
+          newGroups.push({
+            label: group.label ? `${group.label} + LGBTQ2+:${status}` : `LGBTQ2+:${status}`,
+            filters: [...group.filters, { type: 'lgbtq', value: status }]
+          });
+        }
+      }
+      currentGroups = newGroups;
+    }
+
+    return currentGroups;
+  };
+
+  const allSelectedDemographics = createIntersections();
+
+  // Get members that match ALL filters in an intersection
+  const getMembersForIntersection = (filters: Array<{ type: string; value: string }>) => {
+    let members = filteredMembers;
+    
+    for (const filter of filters) {
+      members = members.filter((m: any) => {
+        switch(filter.type) {
+          case 'gender':
+            return (m.gender || '').trim() === filter.value;
+          case 'ethnicity': {
+            const ethnicity = m.ethnicBackground || m.ethnic_background || '';
+            if (filter.value === 'White (European descent)') return ethnicity.includes('White');
+            if (filter.value === 'East Asian') return ethnicity.includes('East Asian');
+            if (filter.value === 'Southeast Asian') return ethnicity.includes('Southeast Asian');
+            if (filter.value === 'South Asian') return ethnicity.includes('South Asian');
+            if (filter.value === 'Black (African, Afro-Caribbean)') return ethnicity.includes('Black');
+            if (filter.value === 'Latino/Latina/Latinx') return ethnicity.includes('Latino') || ethnicity.includes('Latina') || ethnicity.includes('Latinx');
+            if (filter.value === 'West Asian/Arab') return ethnicity.includes('West Asian') || ethnicity.includes('Arab');
+            if (filter.value === 'Indigenous') return ethnicity.includes('Indigenous');
+            return false;
+          }
+          case 'category':
+            return m.category === filter.value;
+          case 'bipoc':
+            return (m.bipocStatus || m.bipoc_status || '').trim() === filter.value;
+          case 'lgbtq':
+            return (m.lgbtqStatus || m.lgbtq_status || '').trim() === filter.value;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return members;
+  };
+
+  // Calculate comparison data for all intersections
   const comparisonData = allSelectedDemographics.map((demo, index) => ({
     name: demo.label,
-    type: demo.type,
-    members: getMembersForDemographic(demo.type, demo.value),
-    provinces: getProvinceDistribution(getMembersForDemographic(demo.type, demo.value)),
+    members: getMembersForIntersection(demo.filters),
+    provinces: getProvinceDistribution(getMembersForIntersection(demo.filters)),
     color: comparisonColors[index % comparisonColors.length]
   }));
 
