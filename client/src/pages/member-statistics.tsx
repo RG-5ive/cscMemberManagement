@@ -1,37 +1,65 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Check, Info, Globe, X } from "lucide-react";
+import { Users, TrendingUp, Award, Globe2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 
-// Chart colors
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D0743C', '#FF6B6B'];
+// Enhanced color palette with contrasting colors
+const CATEGORY_COLORS: { [key: string]: string } = {
+  'Full': '#2563eb',          // Blue
+  'Associate': '#7c3aed',     // Purple  
+  'Companion': '#db2777',     // Pink
+  'Student': '#ea580c',       // Orange
+  'Honorary': '#84cc16',      // Lime
+  'Staff': '#06b6d4',         // Cyan
+  'Affiliate': '#eab308',     // Yellow
+  'LifeFull': '#1e40af',      // Dark Blue
+  'LifeAssociate': '#6d28d9', // Dark Purple
+  'LifeCompanion': '#be185d', // Dark Pink
+  'LifeAffiliate': '#ca8a04'  // Dark Yellow
+};
 
-// Canadian provinces
-const CANADIAN_PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+const GENDER_COLORS: { [key: string]: string } = {
+  'Male': '#3b82f6',
+  'Female': '#ec4899',
+  'Non-binary': '#8b5cf6',
+  'Prefer not to say': '#94a3b8',
+  'Not Specified': '#cbd5e1'
+};
+
+const STATUS_COLORS = {
+  'Yes': '#22c55e',
+  'No': '#ef4444',
+  'Prefer not to say': '#f59e0b',
+  'Not Specified': '#94a3b8'
+};
+
+const PROVINCE_COLORS: { [key: string]: string } = {
+  'ON': '#2563eb',
+  'BC': '#7c3aed',
+  'QC': '#db2777',
+  'AB': '#ea580c',
+  'MB': '#84cc16',
+  'SK': '#06b6d4',
+  'NS': '#eab308',
+  'NB': '#f97316',
+  'NL': '#14b8a6',
+  'PE': '#a855f7',
+  'NT': '#06b6d4',
+  'NU': '#8b5cf6',
+  'YT': '#f59e0b'
+};
 
 export default function MemberStatisticsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedViews, setSelectedViews] = useState<string[]>(["category"]);
-  
-  console.log("MemberStatisticsPage rendering");
   
   const { data: membersData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/members/statistics"],
     retry: 2,
-    staleTime: 0, // Always fetch fresh data for statistics
+    staleTime: 0,
     refetchOnMount: true,
-  });
-
-  console.log("Query state:", { 
-    isLoading, 
-    hasError: !!error, 
-    hasData: !!membersData,
-    dataKeys: membersData ? Object.keys(membersData) : null
   });
 
   if (isLoading) {
@@ -45,12 +73,10 @@ export default function MemberStatisticsPage() {
   }
 
   if (error) {
-    console.error("Member statistics error:", error);
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12 flex-col space-y-4">
           <div className="text-lg text-red-500">Failed to load statistics.</div>
-          <div className="text-sm text-gray-500">Error: {(error as any)?.message || String(error)}</div>
           <button 
             onClick={() => refetch()} 
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -81,540 +107,561 @@ export default function MemberStatisticsPage() {
       .filter((cat: any) => cat && cat.trim() !== '')
   )).sort();
 
-  // Filter members based on selected category
+  // Filter members
   const filteredMembers = selectedCategory === "all" 
     ? allMembers 
     : allMembers.filter((m: any) => m.category === selectedCategory);
 
-  // Calculate basic stats
   const totalMembers = filteredMembers.length;
-  const activeMembers = filteredMembers.filter((m: any) => m.is_active === true || m.isactive === true || m.active === true).length;
-  const activePercentage = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0;
 
-  // Process chart data based on selected views
-  const getChartDataForView = (viewType: string) => {
-    const data: Array<{name: string, count: number}> = [];
-    
-    if (viewType === 'membership-level') {
-      // Member Level distribution
-      const categoryMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const category = member.category || 'Unknown';
-        categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
-      });
-      categoryMap.forEach((count, category) => {
-        data.push({ name: category, count });
-      });
-      
-    } else if (viewType === 'gender') {
-      // Gender distribution
-      const genderMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const gender = member.gender || 'Not Specified';
-        genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
-      });
-      genderMap.forEach((count, gender) => {
-        data.push({ name: gender, count });
-      });
-      
-    } else if (viewType === 'lgbtq2') {
-      // LGBTQ2+ status distribution
-      const lgbtqMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const lgbtq = member.lgbtqStatus || member.lgbtq_status || 'Not Specified';
-        lgbtqMap.set(lgbtq, (lgbtqMap.get(lgbtq) || 0) + 1);
-      });
-      lgbtqMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'bipoc') {
-      // BIPOC status distribution
-      const bipocMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const bipoc = member.bipocStatus || member.bipoc_status || 'Not Specified';
-        bipocMap.set(bipoc, (bipocMap.get(bipoc) || 0) + 1);
-      });
-      bipocMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'black') {
-      // Black (African, Afro-Caribbean, African-Canadian) status
-      const blackMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const black = member.blackStatus || member.black_status || 'Not Specified';
-        blackMap.set(black, (blackMap.get(black) || 0) + 1);
-      });
-      blackMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'east-asian') {
-      // East Asian status
-      const eastAsianMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const eastAsian = member.eastAsianStatus || member.east_asian_status || 'Not Specified';
-        eastAsianMap.set(eastAsian, (eastAsianMap.get(eastAsian) || 0) + 1);
-      });
-      eastAsianMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'indigenous') {
-      // Indigenous status
-      const indigenousMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const indigenous = member.indigenousStatus || member.indigenous_status || 'Not Specified';
-        indigenousMap.set(indigenous, (indigenousMap.get(indigenous) || 0) + 1);
-      });
-      indigenousMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'latino') {
-      // Latino/Latina/Latinx status
-      const latinoMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const latino = member.latinoStatus || member.latino_status || 'Not Specified';
-        latinoMap.set(latino, (latinoMap.get(latino) || 0) + 1);
-      });
-      latinoMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'south-asian') {
-      // South Asian status
-      const southAsianMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const southAsian = member.southAsianStatus || member.south_asian_status || 'Not Specified';
-        southAsianMap.set(southAsian, (southAsianMap.get(southAsian) || 0) + 1);
-      });
-      southAsianMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'southeast-asian') {
-      // Southeast Asian status
-      const southeastAsianMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const southeastAsian = member.southeastAsianStatus || member.southeast_asian_status || 'Not Specified';
-        southeastAsianMap.set(southeastAsian, (southeastAsianMap.get(southeastAsian) || 0) + 1);
-      });
-      southeastAsianMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'west-asian-arab') {
-      // West Asian/Arab status
-      const westAsianMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const westAsian = member.westAsianArabStatus || member.west_asian_arab_status || 'Not Specified';
-        westAsianMap.set(westAsian, (westAsianMap.get(westAsian) || 0) + 1);
-      });
-      westAsianMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'white') {
-      // White (European) status
-      const whiteMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const white = member.whiteStatus || member.white_status || 'Not Specified';
-        whiteMap.set(white, (whiteMap.get(white) || 0) + 1);
-      });
-      whiteMap.forEach((count, status) => {
-        data.push({ name: status, count });
-      });
-      
-    } else if (viewType === 'provinces-territories') {
-      // Canadian provinces and territories distribution
-      const provinceMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const province = member.provinceTerritory || member.province_territory || member.province || 'Not Specified';
-        provinceMap.set(province, (provinceMap.get(province) || 0) + 1);
-      });
-      provinceMap.forEach((count, province) => {
-        data.push({ name: province, count });
-      });
-      
-    } else if (viewType === 'international') {
-      // International locations (non-Canadian)
-      const provinces = ['Ontario', 'Quebec', 'British Columbia', 'Alberta', 'Manitoba', 'Saskatchewan', 'Nova Scotia', 'New Brunswick', 'Newfoundland and Labrador', 'Prince Edward Island', 'Northwest Territories', 'Nunavut', 'Yukon'];
-      const internationalMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const location = member.location || member.city || '';
-        const province = member.provinceTerritory || member.province_territory || member.province || '';
-        const isCanadian = provinces.includes(province) || location.includes('Canada');
-        if (!isCanadian && location.length > 0 && !provinces.includes(location)) {
-          internationalMap.set(location, (internationalMap.get(location) || 0) + 1);
-        }
-      });
-      internationalMap.forEach((count, location) => {
-        data.push({ name: location, count });
-      });
-      
-    } else if (viewType === 'languages') {
-      // Languages spoken distribution
-      const languageMap = new Map();
-      filteredMembers.forEach((member: any) => {
-        const languages = member.languagesSpoken || member.languages_spoken || [];
-        if (Array.isArray(languages)) {
-          languages.forEach((lang: string) => {
-            if (lang && lang.trim()) {
-              languageMap.set(lang, (languageMap.get(lang) || 0) + 1);
-            }
-          });
-        }
-      });
-      languageMap.forEach((count, language) => {
-        data.push({ name: language, count });
-      });
+  // Calculate category distribution
+  type DistributionItem = { name: string; count: number; percentage: string };
+  
+  const categoryMap = new Map<string, number>();
+  allCategories.forEach((cat) => {
+    const count = filteredMembers.filter((m: any) => m.category === cat).length;
+    if (count > 0) categoryMap.set(cat as string, count);
+  });
+  
+  const categoryDistribution: DistributionItem[] = Array.from(categoryMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+
+  // Gender distribution
+  const genderMap = new Map<string, number>();
+  filteredMembers.forEach((m: any) => {
+    const gender = m.gender || 'Not Specified';
+    genderMap.set(gender, (genderMap.get(gender) || 0) + 1);
+  });
+  
+  const genderDistribution: DistributionItem[] = Array.from(genderMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+
+  // BIPOC distribution
+  const bipocMap = new Map<string, number>();
+  filteredMembers.forEach((m: any) => {
+    const status = m.bipocStatus || m.bipoc_status || 'Not Specified';
+    bipocMap.set(status, (bipocMap.get(status) || 0) + 1);
+  });
+  
+  const bipocDistribution: DistributionItem[] = Array.from(bipocMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+
+  // Province distribution
+  const provinceMap = new Map<string, number>();
+  filteredMembers.forEach((m: any) => {
+    const province = m.provinceTerritory || m.province_territory || 'Not Specified';
+    if (province && province !== 'Not Specified') {
+      provinceMap.set(province, (provinceMap.get(province) || 0) + 1);
     }
-    
-    return data.sort((a, b) => b.count - a.count);
-  };
+  });
+  
+  const provinceDistribution: DistributionItem[] = Array.from(provinceMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
 
-  // Get chart data for the primary view (first selected view)
-  const primaryChartData = selectedViews.length > 0 ? getChartDataForView(selectedViews[0]) : [];
-
-  const getChartTitle = (viewType: string) => {
-    switch (viewType) {
-      case 'membership-level': return '1. Member Level';
-      case 'gender': return '2. Gender';
-      case 'lgbtq2': return '3. LGBTQ2+';
-      case 'bipoc': return '4. BIPOC';
-      case 'black': return '5. Black (African, Afro-Caribbean, African-Canadian)';
-      case 'east-asian': return '6. East Asian (China, South Korea, Japan, Taiwan)';
-      case 'indigenous': return '7. Indigenous (First Nations, Métis, Inuk/Inuit)';
-      case 'latino': return '8. Latino/Latina/Latinx (Mexican, Central/South American)';
-      case 'south-asian': return '9. South Asian (Indian, Pakistani, Nepali, Bangladeshi, Sri Lankan, Indo Caribbean)';
-      case 'southeast-asian': return '10. Southeast Asian (Filipino, Thai, Laos, Vietnam)';
-      case 'west-asian-arab': return '11. West Asian/Arab (Arab, Afghan, Egyptian, Iranian, Lebanese, Turkish, Kurdish)';
-      case 'white': return '12. White (European)';
-      case 'provinces-territories': return 'Canadian Provinces & Territories';
-      case 'international': return 'International Locations';
-      case 'languages': return 'Languages Spoken';
-      default: return 'Member Distribution';
-    }
-  };
-
-  const addDemographicView = (viewType: string) => {
-    if (!selectedViews.includes(viewType)) {
-      setSelectedViews([...selectedViews, viewType]);
-    }
-  };
-
-  const removeDemographicView = (viewType: string) => {
-    setSelectedViews(selectedViews.filter(v => v !== viewType));
-  };
-
-  const availableViews = [
-    { id: 'membership-level', label: '1. Member Level' },
-    { id: 'gender', label: '2. Gender' },
-    { id: 'lgbtq2', label: '3. LGBTQ2+' },
-    { id: 'bipoc', label: '4. BIPOC' },
-    { id: 'black', label: '5. Black (African, Afro-Caribbean, African-Canadian)' },
-    { id: 'east-asian', label: '6. East Asian (China, South Korea, Japan, Taiwan)' },
-    { id: 'indigenous', label: '7. Indigenous (First Nations, Métis, Inuk/Inuit)' },
-    { id: 'latino', label: '8. Latino/Latina/Latinx (Mexican, Central/South American)' },
-    { id: 'south-asian', label: '9. South Asian (Indian, Pakistani, Nepali, Bangladeshi, Sri Lankan, Indo Caribbean)' },
-    { id: 'southeast-asian', label: '10. Southeast Asian (Filipino, Thai, Laos, Vietnam)' },
-    { id: 'west-asian-arab', label: '11. West Asian/Arab (Arab, Afghan, Egyptian, Iranian, Lebanese, Turkish, Kurdish)' },
-    { id: 'white', label: '12. White (European)' },
-    { id: 'provinces-territories', label: 'Canadian Provinces & Territories' },
-    { id: 'international', label: 'International Locations' },
-    { id: 'languages', label: 'Languages Spoken' }
+  // Ethnic distribution summary
+  const ethnicCategories = [
+    { key: 'blackStatus', label: 'Black (African, Afro-Caribbean)' },
+    { key: 'eastAsianStatus', label: 'East Asian' },
+    { key: 'indigenousStatus', label: 'Indigenous' },
+    { key: 'latinoStatus', label: 'Latino/Latina/Latinx' },
+    { key: 'southAsianStatus', label: 'South Asian' },
+    { key: 'southeastAsianStatus', label: 'Southeast Asian' },
+    { key: 'westAsianArabStatus', label: 'West Asian/Arab' },
+    { key: 'whiteStatus', label: 'White (European)' }
   ];
+
+  const ethnicDistribution: DistributionItem[] = ethnicCategories.map(({ key, label }): DistributionItem => {
+    const yesCount = filteredMembers.filter((m: any) => {
+      const status = m[key] || m[key.replace(/([A-Z])/g, '_$1').toLowerCase()];
+      return status === 'Yes';
+    }).length;
+    return {
+      name: label,
+      count: yesCount,
+      percentage: ((yesCount / totalMembers) * 100).toFixed(1)
+    };
+  }).filter((item: DistributionItem) => item.count > 0).sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+
+  const getColorForCategory = (name: string, type: 'category' | 'gender' | 'status' | 'province') => {
+    if (type === 'category') return CATEGORY_COLORS[name] || '#64748b';
+    if (type === 'gender') return GENDER_COLORS[name] || '#94a3b8';
+    if (type === 'status') return STATUS_COLORS[name as keyof typeof STATUS_COLORS] || '#94a3b8';
+    if (type === 'province') return PROVINCE_COLORS[name] || '#64748b';
+    return '#64748b';
+  };
 
   const getProvinceDisplayName = (code: string) => {
     const map: {[key: string]: string} = {
-      'ON': 'Ontario', 'BC': 'B.C.', 'QC': 'Quebec', 'AB': 'Alberta',
-      'MB': 'Manitoba', 'SK': 'Sask.', 'NS': 'N.S.', 'NB': 'N.B.',
-      'NL': 'N.L.', 'PE': 'P.E.I.', 'NT': 'N.W.T.', 'NU': 'Nunavut', 'YT': 'Yukon'
+      'ON': 'Ontario', 'BC': 'British Columbia', 'QC': 'Quebec', 'AB': 'Alberta',
+      'MB': 'Manitoba', 'SK': 'Saskatchewan', 'NS': 'Nova Scotia', 'NB': 'New Brunswick',
+      'NL': 'Newfoundland & Labrador', 'PE': 'Prince Edward Island', 
+      'NT': 'Northwest Territories', 'NU': 'Nunavut', 'YT': 'Yukon'
     };
     return map[code] || code;
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Member Statistics</h1>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Member Statistics & Analytics
+        </h1>
         <p className="text-muted-foreground font-medium mt-2">
-          Comprehensive overview of membership data and analytics
+          Comprehensive visual overview of membership distribution and demographics
         </p>
       </div>
 
-      {/* Filter Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Category Filter</label>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories ({allMembers.length} members)</SelectItem>
-              {allCategories.map((category: unknown) => {
-                const categoryStr = category as string;
-                const count = allMembers.filter((m: any) => m.category === categoryStr).length;
-                return (
-                  <SelectItem key={categoryStr} value={categoryStr}>
-                    {categoryStr} ({count} members)
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Demographic Views</label>
-          <div className="space-y-3">
-            {/* Selected Views */}
-            <div className="flex flex-wrap gap-2">
-              {selectedViews.map((view) => (
-                <Badge key={view} variant="default" className="flex items-center gap-2">
-                  {getChartTitle(view)}
-                  <X 
-                    className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                    onClick={() => removeDemographicView(view)}
-                  />
-                </Badge>
-              ))}
-            </div>
-            
-            {/* Add New View */}
-            <Select value="" onValueChange={addDemographicView}>
-              <SelectTrigger>
-                <SelectValue placeholder="Add demographic view" />
+      {/* Filter */}
+      <div className="mb-8">
+        <Card className="border-2 border-blue-500/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Filter by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full md:w-80">
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {availableViews
-                  .filter(view => !selectedViews.includes(view.id))
-                  .map((view) => (
-                    <SelectItem key={view.id} value={view.id}>
-                      {view.label}
+                <SelectItem value="all">All Categories ({allMembers.length} members)</SelectItem>
+                {allCategories.map((category: unknown) => {
+                  const categoryStr = category as string;
+                  const count = allMembers.filter((m: any) => m.category === categoryStr).length;
+                  return (
+                    <SelectItem key={categoryStr} value={categoryStr}>
+                      {categoryStr} ({count} members)
                     </SelectItem>
-                  ))}
+                  );
+                })}
               </SelectContent>
             </Select>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* SUMMARY SECTION */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <Users className="h-6 w-6 text-blue-600" />
+          Member Distribution Summary
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Members</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{totalMembers}</div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {selectedCategory === "all" ? "All categories" : `${selectedCategory} category`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-purple-600 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">Categories</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">{categoryDistribution.length}</div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                Unique membership levels
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-pink-600 bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950 dark:to-pink-900">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-pink-700 dark:text-pink-300">Locations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-pink-900 dark:text-pink-100">{provinceDistribution.length}</div>
+              <p className="text-xs text-pink-600 dark:text-pink-400 mt-1">
+                Provinces & territories
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-600 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">Demographics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">{ethnicDistribution.length}</div>
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                Ethnic categories tracked
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* DETAILED BREAKDOWN SECTION */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <TrendingUp className="h-6 w-6 text-purple-600" />
+          Detailed Member Distribution Breakdown
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Category Distribution */}
+          <Card className="border-2 border-blue-500/30">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5" />
+                Membership Levels
+              </CardTitle>
+              <CardDescription className="text-blue-100">
+                Distribution by membership category
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {categoryDistribution.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: getColorForCategory(item.name, 'category') }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: getColorForCategory(item.name, 'category') }}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={parseFloat(item.percentage)} 
+                      className="h-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorForCategory(item.name, 'category')} ${item.percentage}%, #e5e7eb ${item.percentage}%)`
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Pie Chart */}
+              <div className="mt-6 h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryDistribution}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    >
+                      {categoryDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'category')} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gender Distribution */}
+          <Card className="border-2 border-purple-500/30">
+            <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Gender Distribution
+              </CardTitle>
+              <CardDescription className="text-purple-100">
+                Gender identity breakdown
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {genderDistribution.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: getColorForCategory(item.name, 'gender') }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: getColorForCategory(item.name, 'gender') }}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={parseFloat(item.percentage)} 
+                      className="h-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorForCategory(item.name, 'gender')} ${item.percentage}%, #e5e7eb ${item.percentage}%)`
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Pie Chart */}
+              <div className="mt-6 h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={genderDistribution}
+                      dataKey="count"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    >
+                      {genderDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'gender')} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* BIPOC Distribution */}
+          <Card className="border-2 border-pink-500/30">
+            <CardHeader className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">
+              <CardTitle>BIPOC Status</CardTitle>
+              <CardDescription className="text-pink-100">
+                Black, Indigenous, People of Color identification
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {bipocDistribution.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: getColorForCategory(item.name, 'status') }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: getColorForCategory(item.name, 'status') }}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={parseFloat(item.percentage)} 
+                      className="h-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorForCategory(item.name, 'status')} ${item.percentage}%, #e5e7eb ${item.percentage}%)`
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Bar Chart */}
+              <div className="mt-6 h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={bipocDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                      {bipocDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'status')} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Geographic Distribution */}
+          <Card className="border-2 border-orange-500/30">
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Globe2 className="h-5 w-5" />
+                Geographic Distribution
+              </CardTitle>
+              <CardDescription className="text-orange-100">
+                Members by province & territory
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {provinceDistribution.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: getColorForCategory(item.name, 'province') }}
+                        />
+                        <span className="font-medium">{getProvinceDisplayName(item.name)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: getColorForCategory(item.name, 'province') }}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={parseFloat(item.percentage)} 
+                      className="h-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorForCategory(item.name, 'province')} ${item.percentage}%, #e5e7eb ${item.percentage}%)`
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* ETHNIC DISTRIBUTION SECTION */}
+      {ethnicDistribution.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Ethnic Distribution Overview</h2>
+          <Card className="border-2 border-green-500/30">
+            <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+              <CardTitle>Detailed Ethnic Categories</CardTitle>
+              <CardDescription className="text-green-100">
+                Self-identified ethnic background breakdown (members who selected "Yes")
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {/* Bar Chart */}
+              <div className="h-96 mb-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ethnicDistribution} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={200} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#22c55e" radius={[0, 8, 8, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Detailed List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ethnicDistribution.map((item, index) => (
+                  <div key={index} className="p-4 rounded-lg border-2 border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-green-900 dark:text-green-100">{item.name}</span>
+                      <span className="text-2xl font-bold text-green-600">{item.percentage}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-700 dark:text-green-300">{item.count} members</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Complete Breakdown Table */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Complete Breakdown of Current Selection</h2>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Total Members</CardTitle>
-            <CardDescription>
-              {selectedCategory === 'all' ? 'All registered members' : `${selectedCategory} members`}
+          <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
+            <CardTitle>Full Statistical Overview</CardTitle>
+            <CardDescription className="text-slate-200">
+              All metrics for {selectedCategory === "all" ? "all members" : `${selectedCategory} category`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <Users className="h-6 w-6 mr-2 text-primary" />
-              <span className="text-3xl font-bold">{totalMembers}</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Active Members</CardTitle>
-            <CardDescription>Currently active members</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Check className="h-6 w-6 mr-2 text-green-500" />
-                  <span className="text-3xl font-bold">{activeMembers}</span>
-                </div>
-                <span className="text-xl font-semibold">{activePercentage}%</span>
-              </div>
-              <Progress value={activePercentage} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Categories</CardTitle>
-            <CardDescription>Unique member categories</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <Info className="h-6 w-6 mr-2 text-blue-500" />
-              <span className="text-3xl font-bold">{allCategories.length}</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Selected Views</CardTitle>
-            <CardDescription>{selectedViews.length} demographic view{selectedViews.length !== 1 ? 's' : ''} selected</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <Globe className="h-6 w-6 mr-2 text-purple-500" />
-              <span className="text-3xl font-bold">{selectedViews.length}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts - Multiple Views */}
-      <div className="space-y-8 mt-8">
-        {selectedViews.length > 0 ? selectedViews.map((viewType, index) => {
-          const viewChartData = getChartDataForView(viewType);
-          
-          const viewPieData = (() => {
-            const TOP_ITEMS = 8;
-            const topItems = viewChartData.slice(0, TOP_ITEMS);
-            
-            if (viewChartData.length > TOP_ITEMS) {
-              const otherCount = viewChartData.slice(TOP_ITEMS).reduce((sum, item) => sum + item.count, 0);
-              return [...topItems, { name: "Other", count: otherCount }];
-            }
-            
-            return topItems;
-          })();
-
-          return (
-            <div key={viewType} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Pie Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{getChartTitle(viewType)}</CardTitle>
-                  <CardDescription>
-                    {selectedCategory === 'all' ? 'All members' : `${selectedCategory} members only`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-[400px]">
-                  {viewPieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={viewPieData}
-                          dataKey="count"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={120}
-                          innerRadius={40}
-                          paddingAngle={2}
-                          label={({percent}) => 
-                            percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
-                          }
-                          labelLine={false}
-                        >
-                          {viewPieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value} members`, 'Count']}
-                    contentStyle={{ 
-                      background: 'rgba(255, 255, 255, 0.95)', 
-                      border: 'none', 
-                      borderRadius: '4px', 
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.12)' 
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No data available for current selection</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-              {/* Bar Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{getChartTitle(viewType)} Breakdown</CardTitle>
-                  <CardDescription>Detailed distribution</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[400px]">
-                  {viewChartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={viewChartData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                      >
-                        <XAxis type="number" />
-                        <YAxis 
-                          type="category" 
-                          dataKey="name"
-                          width={75}
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(value: string) => {
-                            if (viewType === 'canadian-provinces') {
-                              return getProvinceDisplayName(value);
-                            }
-                            return value.length > 12 ? value.substring(0, 12) + '...' : value;
-                          }}
-                        />
-                        <Tooltip 
-                          formatter={(value) => [`${value} members`, 'Count']}
-                          contentStyle={{ 
-                            background: 'rgba(255, 255, 255, 0.95)', 
-                            border: 'none', 
-                            borderRadius: '4px', 
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)' 
-                          }}
-                        />
-                        <Bar 
-                          dataKey="count" 
-                          fill="#4f46e5"
-                          radius={[0, 4, 4, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">No data available for current selection</p>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-3">
+                <h3 className="font-bold text-lg text-blue-600 border-b-2 border-blue-600 pb-2">Membership</h3>
+                <div className="space-y-2">
+                  {categoryDistribution.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-slate-900">
+                      <span className="text-sm">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{item.count}</span>
+                        <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          );
-        }) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Select demographic views to see charts and statistics</p>
-          </div>
-        )}
-      </div>
-
-      {/* Data Summary Table */}
-      {selectedViews.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>{getChartTitle(selectedViews[0])} Summary</CardTitle>
-            <CardDescription>Complete breakdown of current selection</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {primaryChartData.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-muted/20 rounded-lg">
-                  <span className="text-sm font-medium truncate mr-2">
-                    {selectedViews[0] === 'canadian-provinces' ? getProvinceDisplayName(item.name) : item.name}
-                  </span>
-                  <span className="text-sm font-semibold text-primary">{item.count}</span>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-bold text-lg text-purple-600 border-b-2 border-purple-600 pb-2">Gender</h3>
+                <div className="space-y-2">
+                  {genderDistribution.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-slate-900">
+                      <span className="text-sm">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{item.count}</span>
+                        <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-bold text-lg text-pink-600 border-b-2 border-pink-600 pb-2">BIPOC</h3>
+                <div className="space-y-2">
+                  {bipocDistribution.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 rounded bg-slate-50 dark:bg-slate-900">
+                      <span className="text-sm">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{item.count}</span>
+                        <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
     </div>
   );
 }
