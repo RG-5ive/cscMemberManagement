@@ -56,6 +56,11 @@ export default function MemberStatisticsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDemographics, setSelectedDemographics] = useState<string[]>(["membership", "gender"]);
   
+  // Comparison state
+  const [comparisonGroup1, setComparisonGroup1] = useState<string>("");
+  const [comparisonGroup2, setComparisonGroup2] = useState<string>("");
+  const [comparisonType, setComparisonType] = useState<string>("gender"); // gender, ethnicity, category, etc.
+  
   const { data: membersData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/members/statistics"],
     retry: 2,
@@ -250,6 +255,91 @@ export default function MemberStatisticsPage() {
     };
     return map[code] || code;
   };
+
+  // Get comparison options based on type
+  const getComparisonOptions = (type: string) => {
+    switch(type) {
+      case 'gender':
+        return genderDistribution.map(d => d.name).filter(n => n);
+      case 'ethnicity':
+        return ethnicDistribution.map(d => d.name).filter(n => n);
+      case 'category':
+        return categoryDistribution.map(d => d.name).filter(n => n);
+      case 'bipoc':
+        return bipocDistribution.map(d => d.name).filter(n => n);
+      case 'lgbtq':
+        return lgbtqDistribution.map(d => d.name).filter(n => n);
+      default:
+        return [];
+    }
+  };
+
+  // Get members for a specific comparison group
+  const getMembersForComparison = (type: string, value: string) => {
+    if (!value) return [];
+    
+    switch(type) {
+      case 'gender':
+        return filteredMembers.filter((m: any) => (m.gender || '').trim() === value);
+      case 'ethnicity':
+        return filteredMembers.filter((m: any) => {
+          const ethnicity = m.ethnicBackground || m.ethnic_background || '';
+          if (value === 'White (European descent)') return ethnicity.includes('White');
+          if (value === 'East Asian') return ethnicity.includes('East Asian');
+          if (value === 'Southeast Asian') return ethnicity.includes('Southeast Asian');
+          if (value === 'South Asian') return ethnicity.includes('South Asian');
+          if (value === 'Black (African, Afro-Caribbean)') return ethnicity.includes('Black');
+          if (value === 'Latino/Latina/Latinx') return ethnicity.includes('Latino') || ethnicity.includes('Latina') || ethnicity.includes('Latinx');
+          if (value === 'West Asian/Arab') return ethnicity.includes('West Asian') || ethnicity.includes('Arab');
+          if (value === 'Indigenous') return ethnicity.includes('Indigenous');
+          return false;
+        });
+      case 'category':
+        return filteredMembers.filter((m: any) => m.category === value);
+      case 'bipoc':
+        return filteredMembers.filter((m: any) => (m.bipocStatus || m.bipoc_status || '').trim() === value);
+      case 'lgbtq':
+        return filteredMembers.filter((m: any) => (m.lgbtqStatus || m.lgbtq_status || '').trim() === value);
+      default:
+        return [];
+    }
+  };
+
+  // Get province distribution for a group
+  const getProvinceDistribution = (members: any[]) => {
+    const provinceMap = new Map<string, number>();
+    members.forEach((m: any) => {
+      const province = m.provinceTerritory || m.province_territory || 'Unknown';
+      provinceMap.set(province, (provinceMap.get(province) || 0) + 1);
+    });
+    return Array.from(provinceMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  // Calculate comparison data
+  const comparisonData = {
+    group1: {
+      members: getMembersForComparison(comparisonType, comparisonGroup1),
+      provinces: getProvinceDistribution(getMembersForComparison(comparisonType, comparisonGroup1))
+    },
+    group2: {
+      members: getMembersForComparison(comparisonType, comparisonGroup2),
+      provinces: getProvinceDistribution(getMembersForComparison(comparisonType, comparisonGroup2))
+    }
+  };
+
+  // Combine provinces for comparison chart
+  const allComparisonProvinces = Array.from(new Set([
+    ...comparisonData.group1.provinces.map(p => p.name),
+    ...comparisonData.group2.provinces.map(p => p.name)
+  ]));
+
+  const comparisonChartData = allComparisonProvinces.map(province => ({
+    province,
+    [comparisonGroup1 || 'Group 1']: comparisonData.group1.provinces.find(p => p.name === province)?.count || 0,
+    [comparisonGroup2 || 'Group 2']: comparisonData.group2.provinces.find(p => p.name === province)?.count || 0
+  }));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -818,6 +908,187 @@ export default function MemberStatisticsPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* DEMOGRAPHIC COMPARISON SECTION */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <BarChart3 className="h-6 w-6 text-cyan-600" />
+          Demographic Comparison & Geographic Analysis
+        </h2>
+        
+        <Card className="border-2 border-cyan-500/30">
+          <CardHeader className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white">
+            <CardTitle>Compare Two Demographics</CardTitle>
+            <CardDescription className="text-cyan-100">
+              Select two groups to compare their numbers and geographic distribution
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {/* Comparison Type Selector */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Comparison Category</label>
+              <Select value={comparisonType} onValueChange={(value) => {
+                setComparisonType(value);
+                setComparisonGroup1("");
+                setComparisonGroup2("");
+              }}>
+                <SelectTrigger className="w-full md:w-80">
+                  <SelectValue placeholder="Select comparison type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gender">Gender</SelectItem>
+                  <SelectItem value="ethnicity">Ethnicity</SelectItem>
+                  <SelectItem value="category">Membership Category</SelectItem>
+                  <SelectItem value="bipoc">BIPOC Status</SelectItem>
+                  <SelectItem value="lgbtq">LGBTQ2+ Status</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Group Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">First Group</label>
+                <Select value={comparisonGroup1} onValueChange={setComparisonGroup1}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select first group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getComparisonOptions(comparisonType).map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Second Group</label>
+                <Select value={comparisonGroup2} onValueChange={setComparisonGroup2}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select second group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getComparisonOptions(comparisonType).map((option) => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Comparison Results */}
+            {comparisonGroup1 && comparisonGroup2 && (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <Card className="border-2 border-cyan-400">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg text-cyan-600">{comparisonGroup1}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-cyan-600">{comparisonData.group1.members.length}</div>
+                      <p className="text-sm text-muted-foreground mt-1">Total members</p>
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Top 3 Provinces:</p>
+                        {comparisonData.group1.provinces.slice(0, 3).map((p, idx) => (
+                          <div key={idx} className="flex justify-between text-sm mb-1">
+                            <span>{p.name}</span>
+                            <span className="font-bold">{p.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2 border-purple-400">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg text-purple-600">{comparisonGroup2}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-purple-600">{comparisonData.group2.members.length}</div>
+                      <p className="text-sm text-muted-foreground mt-1">Total members</p>
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Top 3 Provinces:</p>
+                        {comparisonData.group2.provinces.slice(0, 3).map((p, idx) => (
+                          <div key={idx} className="flex justify-between text-sm mb-1">
+                            <span>{p.name}</span>
+                            <span className="font-bold">{p.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Geographic Comparison Bar Chart */}
+                <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-lg">
+                  <h3 className="text-lg font-bold mb-4">Geographic Distribution Comparison</h3>
+                  <div style={{ height: '400px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={comparisonChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="province" />
+                        <YAxis />
+                        <Tooltip contentStyle={{ fontSize: '14px', padding: '10px' }} />
+                        <Legend />
+                        <Bar dataKey={comparisonGroup1} fill="#06b6d4" name={comparisonGroup1} />
+                        <Bar dataKey={comparisonGroup2} fill="#a855f7" name={comparisonGroup2} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Detailed Province Tables */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-cyan-600">All Provinces - {comparisonGroup1}</h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Province</TableHead>
+                            <TableHead className="text-right">Count</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {comparisonData.group1.provinces.map((p, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{p.name}</TableCell>
+                              <TableCell className="text-right font-bold">{p.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-purple-600">All Provinces - {comparisonGroup2}</h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Province</TableHead>
+                            <TableHead className="text-right">Count</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {comparisonData.group2.provinces.map((p, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{p.name}</TableCell>
+                              <TableCell className="text-right font-bold">{p.count}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
