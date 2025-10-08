@@ -59,10 +59,12 @@ export default function MemberStatisticsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDemographics, setSelectedDemographics] = useState<string[]>(["membership", "gender"]);
   
-  // Comparison state - now supports multiple groups
-  const [selectedComparisonGroups, setSelectedComparisonGroups] = useState<string[]>([]);
-  const [comparisonType, setComparisonType] = useState<string>("gender"); // gender, ethnicity, category, etc.
-  const [genderFilter, setGenderFilter] = useState<string>("all"); // Filter comparison by gender
+  // Comparison state - supports selecting from multiple categories
+  const [selectedEthnicities, setSelectedEthnicities] = useState<string[]>([]);
+  const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedBipocStatuses, setSelectedBipocStatuses] = useState<string[]>([]);
+  const [selectedLgbtqStatuses, setSelectedLgbtqStatuses] = useState<string[]>([]);
   
   const { data: membersData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/members/statistics"],
@@ -259,63 +261,78 @@ export default function MemberStatisticsPage() {
     return map[code] || code;
   };
 
-  // Get comparison options based on type
-  const getComparisonOptions = (type: string) => {
-    switch(type) {
-      case 'gender':
-        return genderDistribution.map(d => d.name).filter(n => n);
-      case 'ethnicity':
-        return ethnicDistribution.map(d => d.name).filter(n => n);
-      case 'category':
-        return categoryDistribution.map(d => d.name).filter(n => n);
-      case 'bipoc':
-        return bipocDistribution.map(d => d.name).filter(n => n);
-      case 'lgbtq':
-        return lgbtqDistribution.map(d => d.name).filter(n => n);
-      default:
-        return [];
-    }
-  };
+  // Get available options for each category
+  const availableEthnicities = ethnicDistribution.map(d => d.name).filter(n => n);
+  const availableGenders = genderDistribution.map(d => d.name).filter(n => n);
+  const availableCategories = categoryDistribution.map(d => d.name).filter(n => n);
+  const availableBipocStatuses = bipocDistribution.map(d => d.name).filter(n => n);
+  const availableLgbtqStatuses = lgbtqDistribution.map(d => d.name).filter(n => n);
 
-  // Toggle group selection
-  const toggleGroupSelection = (group: string) => {
-    setSelectedComparisonGroups(prev => 
-      prev.includes(group) 
-        ? prev.filter(g => g !== group)
-        : [...prev, group]
+  // Helper functions for each category
+  const toggleEthnicity = (ethnicity: string) => {
+    setSelectedEthnicities(prev => 
+      prev.includes(ethnicity) ? prev.filter(e => e !== ethnicity) : [...prev, ethnicity]
     );
   };
 
-  // Select all groups
-  const selectAllGroups = () => {
-    const allOptions = getComparisonOptions(comparisonType);
-    setSelectedComparisonGroups(allOptions);
+  const toggleGender = (gender: string) => {
+    setSelectedGenders(prev => 
+      prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
+    );
   };
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
+  };
+
+  const toggleBipocStatus = (status: string) => {
+    setSelectedBipocStatuses(prev => 
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  };
+
+  const toggleLgbtqStatus = (status: string) => {
+    setSelectedLgbtqStatuses(prev => 
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  };
+
+  // Select/Clear all functions
+  const selectAllEthnicities = () => setSelectedEthnicities(availableEthnicities);
+  const clearAllEthnicities = () => setSelectedEthnicities([]);
+  
+  const selectAllGenders = () => setSelectedGenders(availableGenders);
+  const clearAllGenders = () => setSelectedGenders([]);
+  
+  const selectAllCategories = () => setSelectedCategories(availableCategories);
+  const clearAllCategories = () => setSelectedCategories([]);
+  
+  const selectAllBipocStatuses = () => setSelectedBipocStatuses(availableBipocStatuses);
+  const clearAllBipocStatuses = () => setSelectedBipocStatuses([]);
+  
+  const selectAllLgbtqStatuses = () => setSelectedLgbtqStatuses(availableLgbtqStatuses);
+  const clearAllLgbtqStatuses = () => setSelectedLgbtqStatuses([]);
 
   // Clear all selections
-  const clearAllGroups = () => {
-    setSelectedComparisonGroups([]);
+  const clearAllSelections = () => {
+    setSelectedEthnicities([]);
+    setSelectedGenders([]);
+    setSelectedCategories([]);
+    setSelectedBipocStatuses([]);
+    setSelectedLgbtqStatuses([]);
   };
 
-  // Get unique genders for filter
-  const availableGenders: string[] = Array.from(new Set(
-    allMembers.map((m: any) => m.gender || 'Not Specified').filter((g: string) => g)
-  )).sort();
-
-  // Get members for a specific comparison group (with optional gender filter)
-  const getMembersForComparison = (type: string, value: string) => {
+  // Get members for a specific demographic group
+  const getMembersForDemographic = (type: string, value: string) => {
     if (!value) return [];
-    
-    // First apply gender filter if set
-    const genderFilteredMembers = genderFilter === 'all' 
-      ? filteredMembers 
-      : filteredMembers.filter((m: any) => (m.gender || 'Not Specified') === genderFilter);
     
     switch(type) {
       case 'gender':
-        return genderFilteredMembers.filter((m: any) => (m.gender || '').trim() === value);
+        return filteredMembers.filter((m: any) => (m.gender || '').trim() === value);
       case 'ethnicity':
-        return genderFilteredMembers.filter((m: any) => {
+        return filteredMembers.filter((m: any) => {
           const ethnicity = m.ethnicBackground || m.ethnic_background || '';
           if (value === 'White (European descent)') return ethnicity.includes('White');
           if (value === 'East Asian') return ethnicity.includes('East Asian');
@@ -328,11 +345,11 @@ export default function MemberStatisticsPage() {
           return false;
         });
       case 'category':
-        return genderFilteredMembers.filter((m: any) => m.category === value);
+        return filteredMembers.filter((m: any) => m.category === value);
       case 'bipoc':
-        return genderFilteredMembers.filter((m: any) => (m.bipocStatus || m.bipoc_status || '').trim() === value);
+        return filteredMembers.filter((m: any) => (m.bipocStatus || m.bipoc_status || '').trim() === value);
       case 'lgbtq':
-        return genderFilteredMembers.filter((m: any) => (m.lgbtqStatus || m.lgbtq_status || '').trim() === value);
+        return filteredMembers.filter((m: any) => (m.lgbtqStatus || m.lgbtq_status || '').trim() === value);
       default:
         return [];
     }
@@ -362,13 +379,25 @@ export default function MemberStatisticsPage() {
     '#8b5cf6', // violet
     '#14b8a6', // teal
     '#f97316', // orange
+    '#10b981', // emerald
+    '#f43f5e', // rose
   ];
 
-  // Calculate comparison data for all selected groups
-  const comparisonData = selectedComparisonGroups.map((group, index) => ({
-    name: group,
-    members: getMembersForComparison(comparisonType, group),
-    provinces: getProvinceDistribution(getMembersForComparison(comparisonType, group)),
+  // Combine all selected demographics into one comparison array
+  const allSelectedDemographics = [
+    ...selectedEthnicities.map(e => ({ type: 'ethnicity', value: e, label: e })),
+    ...selectedGenders.map(g => ({ type: 'gender', value: g, label: g })),
+    ...selectedCategories.map(c => ({ type: 'category', value: c, label: c })),
+    ...selectedBipocStatuses.map(b => ({ type: 'bipoc', value: b, label: `BIPOC: ${b}` })),
+    ...selectedLgbtqStatuses.map(l => ({ type: 'lgbtq', value: l, label: `LGBTQ2+: ${l}` })),
+  ];
+
+  // Calculate comparison data for all selected demographics
+  const comparisonData = allSelectedDemographics.map((demo, index) => ({
+    name: demo.label,
+    type: demo.type,
+    members: getMembersForDemographic(demo.type, demo.value),
+    provinces: getProvinceDistribution(getMembersForDemographic(demo.type, demo.value)),
     color: comparisonColors[index % comparisonColors.length]
   }));
 
@@ -385,6 +414,10 @@ export default function MemberStatisticsPage() {
     });
     return dataPoint;
   });
+
+  // Count total selections
+  const totalSelections = selectedEthnicities.length + selectedGenders.length + 
+    selectedCategories.length + selectedBipocStatuses.length + selectedLgbtqStatuses.length;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -972,103 +1005,152 @@ export default function MemberStatisticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            {/* Comparison Type Selector */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Comparison Category</label>
-                <Select value={comparisonType} onValueChange={(value) => {
-                  setComparisonType(value);
-                  setSelectedComparisonGroups([]);
-                }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select comparison type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gender">Gender</SelectItem>
-                    <SelectItem value="ethnicity">Ethnicity</SelectItem>
-                    <SelectItem value="category">Membership Category</SelectItem>
-                    <SelectItem value="bipoc">BIPOC Status</SelectItem>
-                    <SelectItem value="lgbtq">LGBTQ2+ Status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Filter by Gender (Optional)</label>
-                <Select value={genderFilter} onValueChange={setGenderFilter}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All genders" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Genders</SelectItem>
-                    {availableGenders.map((gender: string) => (
-                      <SelectItem key={gender} value={gender}>{gender}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Clear All Button */}
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={clearAllSelections}
+                disabled={totalSelections === 0}
+              >
+                Clear All Selections
+              </Button>
             </div>
 
-            {genderFilter !== 'all' && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  📊 Showing comparison data filtered for: <strong>{genderFilter}</strong> members only
+            {totalSelections > 0 && (
+              <div className="mb-4 p-3 bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800 rounded-lg">
+                <p className="text-sm text-cyan-700 dark:text-cyan-300">
+                  📊 <strong>{totalSelections}</strong> demographic{totalSelections !== 1 ? 's' : ''} selected for comparison
                 </p>
               </div>
             )}
 
-            {/* Group Selection with Checkboxes */}
+            {/* Ethnicity Selection */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-3">
-                <label className="text-sm font-medium">Select Groups to Compare</label>
+                <label className="text-sm font-bold text-purple-600">Ethnicities</label>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={selectAllGroups}
-                    data-testid="button-select-all-groups"
-                  >
-                    Select All
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={clearAllGroups}
-                    data-testid="button-clear-all-groups"
-                  >
-                    Clear All
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={selectAllEthnicities}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={clearAllEthnicities}>Clear</Button>
                 </div>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
-                {getComparisonOptions(comparisonType).map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
+                {availableEthnicities.map((ethnicity) => (
+                  <div key={ethnicity} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`compare-${option}`}
-                      checked={selectedComparisonGroups.includes(option)}
-                      onCheckedChange={() => toggleGroupSelection(option)}
-                      data-testid={`checkbox-compare-${option.toLowerCase().replace(/\s+/g, '-')}`}
+                      id={`ethnicity-${ethnicity}`}
+                      checked={selectedEthnicities.includes(ethnicity)}
+                      onCheckedChange={() => toggleEthnicity(ethnicity)}
                     />
-                    <label
-                      htmlFor={`compare-${option}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {option}
+                    <label htmlFor={`ethnicity-${ethnicity}`} className="text-sm font-medium cursor-pointer">
+                      {ethnicity}
                     </label>
                   </div>
                 ))}
               </div>
-              
-              {selectedComparisonGroups.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {selectedComparisonGroups.length} group{selectedComparisonGroups.length !== 1 ? 's' : ''} selected
-                </p>
-              )}
+            </div>
+
+            {/* Gender Selection */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-bold text-blue-600">Genders</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllGenders}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={clearAllGenders}>Clear</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                {availableGenders.map((gender) => (
+                  <div key={gender} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`gender-${gender}`}
+                      checked={selectedGenders.includes(gender)}
+                      onCheckedChange={() => toggleGender(gender)}
+                    />
+                    <label htmlFor={`gender-${gender}`} className="text-sm font-medium cursor-pointer">
+                      {gender}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Membership Categories */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-bold text-green-600">Membership Categories</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllCategories}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={clearAllCategories}>Clear</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                {availableCategories.map((category) => (
+                  <div key={category} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`category-${category}`}
+                      checked={selectedCategories.includes(category)}
+                      onCheckedChange={() => toggleCategory(category)}
+                    />
+                    <label htmlFor={`category-${category}`} className="text-sm font-medium cursor-pointer">
+                      {category}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* BIPOC Status */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-bold text-pink-600">BIPOC Status</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllBipocStatuses}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={clearAllBipocStatuses}>Clear</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                {availableBipocStatuses.map((status) => (
+                  <div key={status} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`bipoc-${status}`}
+                      checked={selectedBipocStatuses.includes(status)}
+                      onCheckedChange={() => toggleBipocStatus(status)}
+                    />
+                    <label htmlFor={`bipoc-${status}`} className="text-sm font-medium cursor-pointer">
+                      {status}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* LGBTQ2+ Status */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-bold text-amber-600">LGBTQ2+ Status</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllLgbtqStatuses}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={clearAllLgbtqStatuses}>Clear</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                {availableLgbtqStatuses.map((status) => (
+                  <div key={status} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`lgbtq-${status}`}
+                      checked={selectedLgbtqStatuses.includes(status)}
+                      onCheckedChange={() => toggleLgbtqStatus(status)}
+                    />
+                    <label htmlFor={`lgbtq-${status}`} className="text-sm font-medium cursor-pointer">
+                      {status}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Comparison Results */}
-            {selectedComparisonGroups.length > 0 && (
+            {totalSelections > 0 && (
               <>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
