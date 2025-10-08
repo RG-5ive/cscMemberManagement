@@ -194,29 +194,44 @@ export default function MemberStatisticsPage() {
     }))
     .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
 
-  // Ethnic distribution summary
-  const ethnicCategories = [
-    { key: 'blackStatus', label: 'Black (African, Afro-Caribbean)' },
-    { key: 'eastAsianStatus', label: 'East Asian' },
-    { key: 'indigenousStatus', label: 'Indigenous' },
-    { key: 'latinoStatus', label: 'Latino/Latina/Latinx' },
-    { key: 'southAsianStatus', label: 'South Asian' },
-    { key: 'southeastAsianStatus', label: 'Southeast Asian' },
-    { key: 'westAsianArabStatus', label: 'West Asian/Arab' },
-    { key: 'whiteStatus', label: 'White (European)' }
-  ];
-
-  const ethnicDistribution: DistributionItem[] = ethnicCategories.map(({ key, label }): DistributionItem => {
-    const yesCount = filteredMembers.filter((m: any) => {
-      const status = m[key] || m[key.replace(/([A-Z])/g, '_$1').toLowerCase()];
-      return status === 'Yes';
-    }).length;
-    return {
-      name: label,
-      count: yesCount,
-      percentage: ((yesCount / totalMembers) * 100).toFixed(1)
-    };
-  }).filter((item: DistributionItem) => item.count > 0).sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+  // Ethnic distribution from ethnic_background field
+  const ethnicMap = new Map<string, number>();
+  filteredMembers.forEach((m: any) => {
+    const ethnicity = m.ethnicBackground || m.ethnic_background || '';
+    if (ethnicity && ethnicity !== '' && ethnicity !== '-') {
+      // Clean up the ethnicity label for display
+      let cleanLabel = ethnicity;
+      
+      // Map long descriptions to shorter labels
+      if (ethnicity.includes('White')) {
+        cleanLabel = 'White (European descent)';
+      } else if (ethnicity.includes('East Asian')) {
+        cleanLabel = 'East Asian';
+      } else if (ethnicity.includes('Southeast Asian')) {
+        cleanLabel = 'Southeast Asian';
+      } else if (ethnicity.includes('South Asian')) {
+        cleanLabel = 'South Asian';
+      } else if (ethnicity.includes('Black')) {
+        cleanLabel = 'Black (African, Afro-Caribbean)';
+      } else if (ethnicity.includes('Latino') || ethnicity.includes('Latina') || ethnicity.includes('Latinx')) {
+        cleanLabel = 'Latino/Latina/Latinx';
+      } else if (ethnicity.includes('West Asian') || ethnicity.includes('Arab')) {
+        cleanLabel = 'West Asian/Arab';
+      } else if (ethnicity.includes('Indigenous')) {
+        cleanLabel = 'Indigenous';
+      }
+      
+      ethnicMap.set(cleanLabel, (ethnicMap.get(cleanLabel) || 0) + 1);
+    }
+  });
+  
+  const ethnicDistribution: DistributionItem[] = Array.from(ethnicMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
 
   const getColorForCategory = (name: string, type: 'category' | 'gender' | 'status' | 'province') => {
     if (type === 'category') return CATEGORY_COLORS[name] || '#64748b';
