@@ -884,15 +884,17 @@ export default function MembersPage() {
           >
             {/* Table Header - Fixed - Desktop Only */}
             <div className="hidden md:block sticky top-0 bg-background border-b border-border p-4 z-10">
-              <div className="grid grid-cols-9 gap-4 font-medium text-sm text-muted-foreground">
+              <div className="grid grid-cols-11 gap-3 font-medium text-sm text-muted-foreground">
                 <div className="w-12">#</div>
                 <div>Name</div>
                 <div>Category</div>
                 <div>Email</div>
+                <div>Cell Phone</div>
+                <div>Home Phone</div>
                 <div>Province</div>
                 <div>Occupation</div>
                 <div className="text-center">Paid</div>
-                <div className="text-center">Portal Access</div>
+                <div className="text-center">Portal</div>
                 <div className="text-right">Actions</div>
               </div>
             </div>
@@ -916,7 +918,7 @@ export default function MembersPage() {
                     className="border-b border-border hover:bg-muted/50 transition-colors"
                   >
                     {/* Desktop View - Table Row */}
-                    <div className="hidden md:grid md:grid-cols-9 gap-4 py-3">
+                    <div className="hidden md:grid md:grid-cols-11 gap-3 py-3">
                       <div className="w-12 text-sm font-medium">
                         {member.memberNumber || member.member_number || index + 1}
                       </div>
@@ -939,17 +941,39 @@ export default function MembersPage() {
                         </Badge>
                       </div>
                       <div className="text-sm truncate">
-                        <a href={`mailto:${member.email}`} className="text-primary hover:underline">
-                          {highlightSearchTerm(member.email || '', searchQuery)}
-                        </a>
+                        {member.email ? (
+                          <a href={`mailto:${member.email}`} className="text-primary hover:underline">
+                            {highlightSearchTerm(member.email, searchQuery)}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
+                      <div className="text-sm truncate">
+                        {(member.cellPhone || member.cell_phone) ? (
+                          <a href={`tel:${member.cellPhone || member.cell_phone}`} className="text-primary hover:underline">
+                            {highlightSearchTerm(member.cellPhone || member.cell_phone || '', searchQuery)}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
+                      <div className="text-sm truncate">
+                        {(member.homePhone || member.home_phone) ? (
+                          <a href={`tel:${member.homePhone || member.home_phone}`} className="text-primary hover:underline">
+                            {highlightSearchTerm(member.homePhone || member.home_phone || '', searchQuery)}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </div>
                       <div className="text-sm">
                         {(() => {
                           if (!CANADIAN_PROVINCES.includes(member.province)) {
                             return (
                               <span title={member.province}>
-                                <Badge variant="outline" className="bg-blue-50 text-xs">International</Badge>
-                                {member.province && <span className="ml-1 text-xs text-muted-foreground">({member.province})</span>}
+                                <Badge variant="outline" className="bg-blue-50 text-xs">Int'l</Badge>
+                                {member.province && <span className="ml-1 text-xs text-muted-foreground hidden xl:inline">({member.province})</span>}
                               </span>
                             );
                           }
@@ -1031,12 +1055,32 @@ export default function MembersPage() {
                       </div>
                       
                       <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Email: </span>
-                          <a href={`mailto:${member.email}`} className="text-primary hover:underline">
-                            {highlightSearchTerm(member.email || '', searchQuery)}
-                          </a>
-                        </div>
+                        {member.email && (
+                          <div>
+                            <span className="text-muted-foreground">Email: </span>
+                            <a href={`mailto:${member.email}`} className="text-primary hover:underline">
+                              {highlightSearchTerm(member.email, searchQuery)}
+                            </a>
+                          </div>
+                        )}
+                        
+                        {(member.cellPhone || member.cell_phone) && (
+                          <div>
+                            <span className="text-muted-foreground">Cell: </span>
+                            <a href={`tel:${member.cellPhone || member.cell_phone}`} className="text-primary hover:underline">
+                              {highlightSearchTerm(member.cellPhone || member.cell_phone || '', searchQuery)}
+                            </a>
+                          </div>
+                        )}
+                        
+                        {(member.homePhone || member.home_phone) && (
+                          <div>
+                            <span className="text-muted-foreground">Home: </span>
+                            <a href={`tel:${member.homePhone || member.home_phone}`} className="text-primary hover:underline">
+                              {highlightSearchTerm(member.homePhone || member.home_phone || '', searchQuery)}
+                            </a>
+                          </div>
+                        )}
                         
                         <div>
                           <span className="text-muted-foreground">Location: </span>
