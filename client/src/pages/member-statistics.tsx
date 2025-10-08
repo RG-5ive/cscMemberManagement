@@ -62,6 +62,7 @@ export default function MemberStatisticsPage() {
   // Comparison state - now supports multiple groups
   const [selectedComparisonGroups, setSelectedComparisonGroups] = useState<string[]>([]);
   const [comparisonType, setComparisonType] = useState<string>("gender"); // gender, ethnicity, category, etc.
+  const [genderFilter, setGenderFilter] = useState<string>("all"); // Filter comparison by gender
   
   const { data: membersData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/members/statistics"],
@@ -296,15 +297,25 @@ export default function MemberStatisticsPage() {
     setSelectedComparisonGroups([]);
   };
 
-  // Get members for a specific comparison group
+  // Get unique genders for filter
+  const availableGenders: string[] = Array.from(new Set(
+    allMembers.map((m: any) => m.gender || 'Not Specified').filter((g: string) => g)
+  )).sort();
+
+  // Get members for a specific comparison group (with optional gender filter)
   const getMembersForComparison = (type: string, value: string) => {
     if (!value) return [];
     
+    // First apply gender filter if set
+    const genderFilteredMembers = genderFilter === 'all' 
+      ? filteredMembers 
+      : filteredMembers.filter((m: any) => (m.gender || 'Not Specified') === genderFilter);
+    
     switch(type) {
       case 'gender':
-        return filteredMembers.filter((m: any) => (m.gender || '').trim() === value);
+        return genderFilteredMembers.filter((m: any) => (m.gender || '').trim() === value);
       case 'ethnicity':
-        return filteredMembers.filter((m: any) => {
+        return genderFilteredMembers.filter((m: any) => {
           const ethnicity = m.ethnicBackground || m.ethnic_background || '';
           if (value === 'White (European descent)') return ethnicity.includes('White');
           if (value === 'East Asian') return ethnicity.includes('East Asian');
@@ -317,11 +328,11 @@ export default function MemberStatisticsPage() {
           return false;
         });
       case 'category':
-        return filteredMembers.filter((m: any) => m.category === value);
+        return genderFilteredMembers.filter((m: any) => m.category === value);
       case 'bipoc':
-        return filteredMembers.filter((m: any) => (m.bipocStatus || m.bipoc_status || '').trim() === value);
+        return genderFilteredMembers.filter((m: any) => (m.bipocStatus || m.bipoc_status || '').trim() === value);
       case 'lgbtq':
-        return filteredMembers.filter((m: any) => (m.lgbtqStatus || m.lgbtq_status || '').trim() === value);
+        return genderFilteredMembers.filter((m: any) => (m.lgbtqStatus || m.lgbtq_status || '').trim() === value);
       default:
         return [];
     }
@@ -962,24 +973,49 @@ export default function MemberStatisticsPage() {
           </CardHeader>
           <CardContent className="pt-6">
             {/* Comparison Type Selector */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Comparison Category</label>
-              <Select value={comparisonType} onValueChange={(value) => {
-                setComparisonType(value);
-                setSelectedComparisonGroups([]);
-              }}>
-                <SelectTrigger className="w-full md:w-80">
-                  <SelectValue placeholder="Select comparison type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gender">Gender</SelectItem>
-                  <SelectItem value="ethnicity">Ethnicity</SelectItem>
-                  <SelectItem value="category">Membership Category</SelectItem>
-                  <SelectItem value="bipoc">BIPOC Status</SelectItem>
-                  <SelectItem value="lgbtq">LGBTQ2+ Status</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Comparison Category</label>
+                <Select value={comparisonType} onValueChange={(value) => {
+                  setComparisonType(value);
+                  setSelectedComparisonGroups([]);
+                }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select comparison type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gender">Gender</SelectItem>
+                    <SelectItem value="ethnicity">Ethnicity</SelectItem>
+                    <SelectItem value="category">Membership Category</SelectItem>
+                    <SelectItem value="bipoc">BIPOC Status</SelectItem>
+                    <SelectItem value="lgbtq">LGBTQ2+ Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Filter by Gender (Optional)</label>
+                <Select value={genderFilter} onValueChange={setGenderFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All genders" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Genders</SelectItem>
+                    {availableGenders.map((gender: string) => (
+                      <SelectItem key={gender} value={gender}>{gender}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {genderFilter !== 'all' && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  📊 Showing comparison data filtered for: <strong>{genderFilter}</strong> members only
+                </p>
+              </div>
+            )}
 
             {/* Group Selection with Checkboxes */}
             <div className="mb-6">
