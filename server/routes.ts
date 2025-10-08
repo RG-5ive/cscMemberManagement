@@ -3690,6 +3690,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to retrieve users' });
     }
   });
+
+  // Create new admin user - Admin only endpoint
+  app.post("/api/users/admin", requireAuth, async (req, res) => {
+    try {
+      // Check if the requester is an admin
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ 
+          error: 'Access denied',
+          message: 'Only administrators can create admin users'
+        });
+      }
+
+      const { username, email, password, firstName, lastName, role } = req.body;
+
+      // Validate required fields
+      if (!username || !email || !password) {
+        return res.status(400).json({ 
+          error: 'Missing required fields',
+          message: 'Username, email, and password are required' 
+        });
+      }
+
+      // Validate role
+      const validRoles = ['user', 'admin', 'committee_chair', 'committee_cochair', 'committee_member'];
+      const userRole = role || 'admin'; // Default to admin
+      if (!validRoles.includes(userRole)) {
+        return res.status(400).json({ 
+          error: 'Invalid role',
+          message: `Role must be one of: ${validRoles.join(', ')}` 
+        });
+      }
+
+      // Check if username already exists
+      const existingUsername = await db.query.users.findFirst({
+        where: eq(users.username, username)
+      });
+
+      if (existingUsername) {
+        return res.status(400).json({ 
+          error: 'Username exists',
+          message: 'This username is already taken' 
+        });
+      }
+
+      // Check if email already exists
+      const existingEmail = await db.query.users.findFirst({
+        where: eq(users.email, email)
+      });
+
+      if (existingEmail) {
+        return res.status(400).json({ 
+          error: 'Email exists',
+          message: 'This email is already registered' 
+        });
+      }
+
+      // Hash the password
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(password);
+
+      // Create the new user
+      const [newUser] = await db.insert(users).values({
+        username,
+        email,
+        password: hashedPassword,
+        role: userRole as any,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        hasCompletedOnboarding: true, // Admin users don't need onboarding
+      }).returning();
+
+      // Remove password from response
+      const { password: _, ...safeUser } = newUser;
+
+      console.log(`New admin user created: ${username} (${email}) with role: ${userRole}`);
+
+      res.status(201).json({ 
+        message: 'Admin user created successfully',
+        user: safeUser 
+      });
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      res.status(500).json({ error: 'Failed to create admin user' });
+    }
+  });
   
   // Get committees and roles for the authenticated user
   app.get("/api/users/me/committee-roles", requireAuth, async (req, res) => {
