@@ -99,6 +99,7 @@ function CookieRefresher() {
 
 function Router() {
   const [location] = useLocation();
+  const { user } = useAuth();
   
   // Log navigation for debugging
   useEffect(() => {
@@ -107,8 +108,16 @@ function Router() {
   
   return (
     <Switch>
+      {/* Root route - redirect to login or dashboard based on auth status */}
+      <Route path="/">
+        {user ? (
+          user.role === "admin" ? <Dashboard /> : <Dashboard />
+        ) : (
+          <AuthPage isAdminLogin={false} />
+        )}
+      </Route>
+      
       {/* Member Portal Routes */}
-      <ProtectedRoute path="/" component={Dashboard} allowedRoles={["user"]} />
       <ProtectedRoute path="/profile" component={Profile} allowedRoles={["user", "admin"]} />
       <ProtectedRoute path="/onboarding" component={OnboardingPage} allowedRoles={["user"]} />
       <ProtectedRoute path="/messages" component={Dashboard} allowedRoles={["user"]} />
@@ -121,6 +130,7 @@ function Router() {
       <ProtectedRoute path="/admin/members/:id" component={MemberDetailPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/member-statistics" component={MemberStatisticsPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/committees" component={CommitteeManagementPage} allowedRoles={["admin", "committee_chair", "committee_cochair"]} />
+      <ProtectedRoute path="/admin/users" component={AdminUsersPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/users" component={AdminUsersPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/surveys" component={Dashboard} allowedRoles={["admin"]} />
       <ProtectedRoute path="/committee-selection" component={CommitteeSelectionPage} allowedRoles={["committee_chair", "committee_cochair"]} />
