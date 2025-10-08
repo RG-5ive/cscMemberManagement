@@ -54,6 +54,7 @@ const PROVINCE_COLORS: { [key: string]: string } = {
 
 export default function MemberStatisticsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedDemographics, setSelectedDemographics] = useState<string[]>(["membership", "gender"]);
   
   const { data: membersData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/members/statistics"],
@@ -161,6 +162,21 @@ export default function MemberStatisticsPage() {
     }))
     .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
 
+  // LGBTQ2+ distribution
+  const lgbtqMap = new Map<string, number>();
+  filteredMembers.forEach((m: any) => {
+    const status = m.lgbtqStatus || m.lgbtq_status || 'Not Specified';
+    lgbtqMap.set(status, (lgbtqMap.get(status) || 0) + 1);
+  });
+  
+  const lgbtqDistribution: DistributionItem[] = Array.from(lgbtqMap.entries())
+    .map(([name, count]): DistributionItem => ({
+      name,
+      count,
+      percentage: ((count / totalMembers) * 100).toFixed(1)
+    }))
+    .sort((a: DistributionItem, b: DistributionItem) => b.count - a.count);
+
   // Province distribution
   const provinceMap = new Map<string, number>();
   filteredMembers.forEach((m: any) => {
@@ -232,15 +248,15 @@ export default function MemberStatisticsPage() {
         </p>
       </div>
 
-      {/* Filter */}
-      <div className="mb-8">
+      {/* Filters */}
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-2 border-blue-500/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Filter by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-80">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -256,6 +272,48 @@ export default function MemberStatisticsPage() {
                 })}
               </SelectContent>
             </Select>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-purple-500/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Select Demographics to Compare</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'membership', label: 'Membership Levels', color: 'bg-blue-500' },
+                  { id: 'gender', label: 'Gender', color: 'bg-purple-500' },
+                  { id: 'bipoc', label: 'BIPOC', color: 'bg-pink-500' },
+                  { id: 'lgbtq', label: 'LGBTQ2+', color: 'bg-indigo-500' },
+                  { id: 'geography', label: 'Geography', color: 'bg-orange-500' },
+                  { id: 'ethnicity', label: 'Ethnicity', color: 'bg-green-500' }
+                ].map((demo) => (
+                  <button
+                    key={demo.id}
+                    onClick={() => {
+                      if (selectedDemographics.includes(demo.id)) {
+                        setSelectedDemographics(selectedDemographics.filter(d => d !== demo.id));
+                      } else {
+                        setSelectedDemographics([...selectedDemographics, demo.id]);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      selectedDemographics.includes(demo.id)
+                        ? `${demo.color} text-white shadow-lg scale-105`
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                    }`}
+                    data-testid={`select-demographic-${demo.id}`}
+                  >
+                    {demo.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Click to select/deselect demographics for comparison ({selectedDemographics.length} selected)
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -325,7 +383,8 @@ export default function MemberStatisticsPage() {
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Category Distribution */}
+          {/* Membership Levels Distribution */}
+          {selectedDemographics.includes('membership') && (
           <Card className="border-2 border-blue-500/30">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <CardTitle className="flex items-center gap-2">
@@ -367,7 +426,7 @@ export default function MemberStatisticsPage() {
               </div>
               
               {/* Pie Chart */}
-              <div className="mt-6 h-80">
+              <div className="mt-6" style={{ height: '500px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -376,21 +435,31 @@ export default function MemberStatisticsPage() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      outerRadius={180}
                       label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      labelLine={true}
                     >
                       {categoryDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'category')} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ fontSize: '14px', padding: '10px' }}
+                      formatter={(value: any) => [`${value} members`, 'Count']}
+                    />
+                    <Legend 
+                      wrapperStyle={{ fontSize: '14px' }}
+                      iconSize={16}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Gender Distribution */}
+          {selectedDemographics.includes('gender') && (
           <Card className="border-2 border-purple-500/30">
             <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
               <CardTitle className="flex items-center gap-2">
@@ -432,7 +501,7 @@ export default function MemberStatisticsPage() {
               </div>
 
               {/* Pie Chart */}
-              <div className="mt-6 h-80">
+              <div className="mt-6" style={{ height: '500px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -441,21 +510,31 @@ export default function MemberStatisticsPage() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      outerRadius={180}
                       label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      labelLine={true}
                     >
                       {genderDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'gender')} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ fontSize: '14px', padding: '10px' }}
+                      formatter={(value: any) => [`${value} members`, 'Count']}
+                    />
+                    <Legend 
+                      wrapperStyle={{ fontSize: '14px' }}
+                      iconSize={16}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* BIPOC Distribution */}
+          {selectedDemographics.includes('bipoc') && (
           <Card className="border-2 border-pink-500/30">
             <CardHeader className="bg-gradient-to-r from-pink-500 to-pink-600 text-white">
               <CardTitle>BIPOC Status</CardTitle>
@@ -511,8 +590,72 @@ export default function MemberStatisticsPage() {
               </div>
             </CardContent>
           </Card>
+          )}
+
+          {/* LGBTQ2+ Distribution */}
+          {selectedDemographics.includes('lgbtq') && (
+          <Card className="border-2 border-indigo-500/30">
+            <CardHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+              <CardTitle>LGBTQ2+ Status</CardTitle>
+              <CardDescription className="text-indigo-100">
+                LGBTQ2+ identification breakdown
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {lgbtqDistribution.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: getColorForCategory(item.name, 'status') }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-muted-foreground">{item.count}</span>
+                        <span className="text-sm font-bold" style={{ color: getColorForCategory(item.name, 'status') }}>
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={parseFloat(item.percentage)} 
+                      className="h-3"
+                      style={{
+                        background: `linear-gradient(to right, ${getColorForCategory(item.name, 'status')} ${item.percentage}%, #e5e7eb ${item.percentage}%)`
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Bar Chart */}
+              <div className="mt-6" style={{ height: '400px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={lgbtqDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip 
+                      contentStyle={{ fontSize: '14px', padding: '10px' }}
+                      formatter={(value: any) => [`${value} members`, 'Count']}
+                    />
+                    <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                      {lgbtqDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getColorForCategory(entry.name, 'status')} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+          )}
 
           {/* Geographic Distribution */}
+          {selectedDemographics.includes('geography') && (
           <Card className="border-2 border-orange-500/30">
             <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
               <CardTitle className="flex items-center gap-2">
@@ -554,11 +697,12 @@ export default function MemberStatisticsPage() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
 
       {/* ETHNIC DISTRIBUTION SECTION */}
-      {ethnicDistribution.length > 0 && (
+      {selectedDemographics.includes('ethnicity') && ethnicDistribution.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Ethnic Distribution Overview</h2>
           <Card className="border-2 border-green-500/30">
