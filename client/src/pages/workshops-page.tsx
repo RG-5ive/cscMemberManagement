@@ -419,13 +419,8 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
         {workshop.sponsoredBy && (
           <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
             <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              🎉 Sponsored by {workshop.sponsoredBy}
+              Sponsored by {workshop.sponsoredBy}
             </p>
-            {workshop.globalDiscountPercentage && workshop.globalDiscountPercentage > 0 && (
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                Includes {workshop.globalDiscountPercentage}% discount for all members
-              </p>
-            )}
           </div>
         )}
         {userPrice && (
