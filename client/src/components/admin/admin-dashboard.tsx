@@ -91,18 +91,18 @@ export function AdminDashboard() {
       {/* Quick Access Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Member Statistics Card */}
-        <div className="border-4 border-sky-200 dark:border-sky-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
-          <Card className="border-0">
+        <div className="border-4 border-sky-200 dark:border-sky-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow h-full">
+          <Card className="border-0 h-full flex flex-col">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <BarChart3 className="h-6 w-6 text-sky-500 dark:text-sky-400" />
-                Member Statistics
+              <CardTitle className="flex items-center gap-3 text-xl leading-tight break-words">
+                <BarChart3 className="h-6 w-6 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                <span>Member Statistics</span>
               </CardTitle>
-              <CardDescription className="font-medium">
-                View comprehensive member analytics, demographics, and activity metrics
+              <CardDescription className="font-medium leading-tight break-words min-h-[3rem]">
+                View comprehensive member analytics and activity metrics
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
                   {displayStats.totalMembers} Members
@@ -122,18 +122,18 @@ export function AdminDashboard() {
         </div>
 
         {/* View All Members Card */}
-        <div className="border-4 border-amber-200 dark:border-amber-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
-          <Card className="border-0">
+        <div className="border-4 border-amber-200 dark:border-amber-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow h-full">
+          <Card className="border-0 h-full flex flex-col">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Users className="h-6 w-6 text-amber-500 dark:text-amber-400" />
-                View All Members
+              <CardTitle className="flex items-center gap-3 text-xl leading-tight break-words">
+                <Users className="h-6 w-6 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                <span>View All Members</span>
               </CardTitle>
-              <CardDescription className="font-medium">
-                Browse complete member directory with search, filter, and management tools
+              <CardDescription className="font-medium leading-tight break-words min-h-[3rem]">
+                Browse complete member directory with search and filter tools
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                   {displayStats.totalMembers} Records
@@ -153,18 +153,18 @@ export function AdminDashboard() {
         </div>
 
         {/* Workshop Management Card */}
-        <div className="border-4 border-emerald-200 dark:border-emerald-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
-          <Card className="border-0">
+        <div className="border-4 border-emerald-200 dark:border-emerald-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow h-full">
+          <Card className="border-0 h-full flex flex-col">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Calendar className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
-                Workshop Management
+              <CardTitle className="flex items-center gap-3 text-xl leading-tight break-words">
+                <Calendar className="h-6 w-6 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                <span>Workshop Management</span>
               </CardTitle>
-              <CardDescription className="font-medium">
-                Create, manage, and track workshops, events, and participant registrations
+              <CardDescription className="font-medium leading-tight break-words min-h-[3rem]">
+                Create, manage, and track workshops and participant registrations
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {workshops?.length || 1} Workshops
@@ -184,18 +184,18 @@ export function AdminDashboard() {
         </div>
 
         {/* Discord Management Card */}
-        <div className="border-4 border-violet-200 dark:border-violet-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
-          <Card className="border-0">
+        <div className="border-4 border-violet-200 dark:border-violet-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow h-full">
+          <Card className="border-0 h-full flex flex-col">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <MessageSquare className="h-6 w-6 text-violet-500 dark:text-violet-400" />
-                Discord Management
+              <CardTitle className="flex items-center gap-3 text-xl leading-tight break-words">
+                <MessageSquare className="h-6 w-6 text-violet-500 dark:text-violet-400 flex-shrink-0" />
+                <span>Discord Management</span>
               </CardTitle>
-              <CardDescription className="font-medium">
+              <CardDescription className="font-medium leading-tight break-words min-h-[3rem]">
                 Manage Discord server, channels, roles, and community moderation
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col justify-end">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                   Community Hub
