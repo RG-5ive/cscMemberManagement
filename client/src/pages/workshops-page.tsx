@@ -32,6 +32,11 @@ export default function WorkshopsPage() {
     queryKey: ["/api/workshops"],
   });
 
+  // Fetch committees for displaying committee names
+  const { data: committees = [] } = useQuery<any[]>({
+    queryKey: ["/api/committees"],
+  });
+
   // This function is replaced by handleRegisterSuccess below
 
   if (isLoading) {
@@ -181,7 +186,8 @@ export default function WorkshopsPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Workshop Name</TableHead>
-                            <TableHead>Date</TableHead>
+                            <TableHead>Date & Time</TableHead>
+                            <TableHead>Committee</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Capacity</TableHead>
                             <TableHead>Status</TableHead>
@@ -189,43 +195,61 @@ export default function WorkshopsPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {workshops.map((workshop) => (
-                            <TableRow key={workshop.id}>
-                              <TableCell className="font-medium">{workshop.title}</TableCell>
-                              <TableCell>{format(new Date(workshop.date), "MMM d, yyyy")}</TableCell>
-                              <TableCell>{workshop.isOnline ? "Online" : workshop.locationAddress || "TBA"}</TableCell>
-                              <TableCell>{workshop.capacity}</TableCell>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  new Date(workshop.date) > new Date() 
-                                    ? "bg-green-100 text-green-800" 
-                                    : "bg-gray-100 text-gray-800"
-                                }`}>
-                                  {new Date(workshop.date) > new Date() ? "Upcoming" : "Past"}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditWorkshop(workshop)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedWorkshop(workshop.id)}
-                                  >
-                                    <Users className="h-4 w-4 mr-1" />
-                                    Participants
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {workshops.map((workshop) => {
+                            const committee = committees.find(c => c.id === workshop.committeeId);
+                            
+                            return (
+                              <TableRow key={workshop.id}>
+                                <TableCell className="font-medium">{workshop.title}</TableCell>
+                                <TableCell>
+                                  <div>{format(new Date(workshop.date), "MMM d, yyyy")}</div>
+                                  {workshop.startTime && workshop.endTime && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {workshop.startTime} - {workshop.endTime}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {committee ? (
+                                    <span className="text-sm">{committee.name}</span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>{workshop.isOnline ? "Online" : workshop.locationAddress || "TBA"}</TableCell>
+                                <TableCell>{workshop.capacity}</TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    new Date(workshop.date) > new Date() 
+                                      ? "bg-green-100 text-green-800" 
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}>
+                                    {new Date(workshop.date) > new Date() ? "Upcoming" : "Past"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditWorkshop(workshop)}
+                                    >
+                                      <Edit className="h-4 w-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setSelectedWorkshop(workshop.id)}
+                                    >
+                                      <Users className="h-4 w-4 mr-1" />
+                                      Participants
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
