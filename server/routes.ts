@@ -2667,6 +2667,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update workshop visibility (admin only)
+  app.patch("/api/workshops/:id/visibility", requireAuth, async (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const workshopId = parseInt(req.params.id);
+      
+      if (isNaN(workshopId)) {
+        return res.status(400).json({ error: "Invalid workshop ID" });
+      }
+
+      const { visibleToGeneralMembers, visibleToCommitteeChairs, visibleToAdmins } = req.body;
+
+      // Update visibility
+      const [updatedWorkshop] = await db.update(workshops)
+        .set({
+          visibleToGeneralMembers,
+          visibleToCommitteeChairs,
+          visibleToAdmins
+        })
+        .where(eq(workshops.id, workshopId))
+        .returning();
+      
+      if (!updatedWorkshop) {
+        return res.status(404).json({ error: "Workshop not found" });
+      }
+
+      console.log(`Workshop ${workshopId} visibility updated by admin ${req.user.id}`);
+      res.json(updatedWorkshop);
+    } catch (error) {
+      console.error("Error updating workshop visibility:", error);
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
   app.post("/api/workshops/:id/register", requireAuth, async (req, res) => {
     try {
       if (!req.user) {

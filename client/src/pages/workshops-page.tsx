@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { apiRequest } from "@/lib/queryClient";
-import { Calendar, Clock, Users, Edit, Trash2 } from "lucide-react";
+import { Calendar, Clock, Users, Edit, Trash2, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import CreateWorkshopDialog from "@/components/workshops/create-workshop-dialog";
 import EditWorkshopDialog from "@/components/workshops/edit-workshop-dialog";
@@ -99,6 +100,29 @@ export default function WorkshopsPage() {
   const handleEditWorkshop = (workshop: Workshop) => {
     setEditingWorkshop(workshop);
     setOpenEditDialog(true);
+  };
+
+  // Handle workshop visibility update
+  const handleUpdateVisibility = async (workshopId: number, visibility: { visibleToGeneralMembers?: boolean; visibleToCommitteeChairs?: boolean; visibleToAdmins?: boolean }) => {
+    try {
+      const response = await apiRequest("PATCH", `/api/workshops/${workshopId}/visibility`, visibility);
+      
+      if (response.ok) {
+        toast({
+          title: "Visibility Updated",
+          description: "Workshop calendar visibility has been updated",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/workshops"] });
+      } else {
+        throw new Error("Failed to update visibility");
+      }
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Failed to update visibility",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle successful workshop update
@@ -204,6 +228,7 @@ export default function WorkshopsPage() {
                             <TableHead>Capacity</TableHead>
                             <TableHead>Price</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Calendar Visibility</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -258,6 +283,52 @@ export default function WorkshopsPage() {
                                   }`}>
                                     {new Date(workshop.date) > new Date() ? "Upcoming" : "Past"}
                                   </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={workshop.visibleToGeneralMembers || false}
+                                        onCheckedChange={(checked) => 
+                                          handleUpdateVisibility(workshop.id, {
+                                            visibleToGeneralMembers: checked,
+                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs,
+                                            visibleToAdmins: workshop.visibleToAdmins
+                                          })
+                                        }
+                                        className="data-[state=checked]:bg-emerald-500"
+                                      />
+                                      <span className="text-xs">📅 Members</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={workshop.visibleToCommitteeChairs || false}
+                                        onCheckedChange={(checked) => 
+                                          handleUpdateVisibility(workshop.id, {
+                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers,
+                                            visibleToCommitteeChairs: checked,
+                                            visibleToAdmins: workshop.visibleToAdmins
+                                          })
+                                        }
+                                        className="data-[state=checked]:bg-sky-500"
+                                      />
+                                      <span className="text-xs">📋 Chairs</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Switch
+                                        checked={workshop.visibleToAdmins !== false}
+                                        onCheckedChange={(checked) => 
+                                          handleUpdateVisibility(workshop.id, {
+                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers,
+                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs,
+                                            visibleToAdmins: checked
+                                          })
+                                        }
+                                        className="data-[state=checked]:bg-purple-500"
+                                      />
+                                      <span className="text-xs">⚙️ Admins</span>
+                                    </div>
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex gap-2">

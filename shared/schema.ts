@@ -162,6 +162,10 @@ export const workshops = pgTable("workshops", {
   sponsoredBy: text("sponsored_by"), // Sponsor name/organization
   isOnline: boolean("is_online").default(false),
   meetingLink: text("meeting_link"),
+  // Calendar visibility controls
+  visibleToGeneralMembers: boolean("visible_to_general_members").default(false),
+  visibleToCommitteeChairs: boolean("visible_to_committee_chairs").default(true),
+  visibleToAdmins: boolean("visible_to_admins").default(true),
   // Administrative fields
   requiresApproval: boolean("requires_approval").default(false),
   createdById: integer("created_by_id").references(() => users.id),
