@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WorkshopParticipantsManager } from "@/components/admin/workshop-participants-manager";
+import { Link } from "wouter";
 
 export default function WorkshopsPage() {
   const { toast } = useToast();
@@ -107,8 +108,19 @@ export default function WorkshopsPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Workshops & Events</h1>
+      <div className="mb-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Workshops & Events</h1>
+        </div>
+        {isAdmin && (
+          <div className="mt-4 inline-block border-4 border-[#7dd3d3] rounded-lg p-1 bg-white">
+            <Button asChild variant="outline" className="rounded-lg border-0">
+              <Link href="/workshop-pricing">
+                Workshop Pricing Rules
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

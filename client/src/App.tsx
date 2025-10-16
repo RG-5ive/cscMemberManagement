@@ -21,7 +21,7 @@ import CommitteeSelectionPage from "@/pages/committee-selection";
 import ChairLoginPage from "@/pages/chair-login";
 import AdminUsersPage from "@/pages/admin-users-page";
 import MemberStatisticsPage from "@/pages/member-statistics";
-import MembershipPricingPage from "@/pages/membership-pricing-page";
+import WorkshopPricingPage from "@/pages/workshop-pricing-page";
 import NotFound from "@/pages/not-found";
 
 // This component ensures cookies are sent with all requests and session is maintained
@@ -130,7 +130,7 @@ function Router() {
       <ProtectedRoute path="/admin/members" component={MembersPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/members/:id" component={MemberDetailPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/member-statistics" component={MemberStatisticsPage} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/membership-pricing" component={MembershipPricingPage} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/workshop-pricing" component={WorkshopPricingPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/admin/committees" component={CommitteeManagementPage} allowedRoles={["admin", "committee_chair", "committee_cochair"]} />
       <ProtectedRoute path="/admin/users" component={AdminUsersPage} allowedRoles={["admin"]} />
       <ProtectedRoute path="/users" component={AdminUsersPage} allowedRoles={["admin"]} />

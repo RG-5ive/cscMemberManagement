@@ -82,16 +82,9 @@ export function AdminDashboard() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <div className="flex items-center gap-4 mt-2">
-          <p className="text-muted-foreground font-medium">
-            Manage members, workshops, and view system analytics
-          </p>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href="/membership-pricing">
-              Membership Pricing Rules
-            </Link>
-          </Button>
-        </div>
+        <p className="text-muted-foreground font-medium mt-2">
+          Manage members, workshops, and view system analytics
+        </p>
       </div>
 
       {/* Quick Access Cards */}
