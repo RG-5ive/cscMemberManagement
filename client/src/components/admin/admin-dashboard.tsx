@@ -5,10 +5,18 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { Workshop } from '@shared/schema';
 import { Link } from 'wouter';
-import { BarChart3, Calendar, AlertTriangle, MessageSquare, Users } from 'lucide-react';
+import { BarChart3, Calendar, AlertTriangle, MessageSquare, Users, UserCircle, LogOut } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { EnhancedCalendar } from '@/components/ui/enhanced-calendar';
 import { DiscordManagement } from './discord-management';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 
 interface DashboardStats {
   totalMembers: number;
@@ -16,6 +24,7 @@ interface DashboardStats {
 }
 
 export function AdminDashboard() {
+  const { user, logoutMutation } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -86,6 +95,112 @@ export function AdminDashboard() {
         <p className="text-muted-foreground font-medium mt-2">
           Manage members, workshops, and view system analytics
         </p>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="border-b pb-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <NavigationMenu className="hidden sm:block">
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <Link href="/">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Dashboard
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link href="/admin/committees">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Committees
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link href="/workshops">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Workshops
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link href="/surveys">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Surveys
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link href="/profile">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    User Profile
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link href="/users">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Admin Users
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+
+          {/* Mobile View - Stacked Links */}
+          <div className="sm:hidden flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/">Dashboard</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/committees">Committees</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/workshops">Workshops</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/surveys">Surveys</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/profile">User Profile</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/users">Admin Users</Link>
+            </Button>
+          </div>
+
+          {/* User Info and Sign Out */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-sm hidden lg:block">
+              <span className="text-muted-foreground font-medium">Signed in as </span>
+              <span className="font-medium">{user?.username}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                console.log("Logout button clicked");
+                logoutMutation.mutate();
+              }}
+              disabled={logoutMutation.isPending}
+              className="flex items-center gap-1 sm:gap-2 text-muted-foreground font-medium hover:text-destructive hover:bg-destructive/10"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {logoutMutation.isPending ? "Signing Out..." : "Sign Out"}
+              </span>
+              <span className="sm:hidden">
+                {logoutMutation.isPending ? "..." : "Exit"}
+              </span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Access Cards */}
