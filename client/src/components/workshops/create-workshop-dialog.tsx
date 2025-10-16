@@ -45,6 +45,9 @@ const workshopSchema = z.object({
   committeeId: z.coerce.number().optional(),
   locationAddress: z.string().optional(),
   materials: z.string().optional(),
+  baseCost: z.coerce.number().min(0, "Cost must be at least 0").optional(),
+  globalDiscountPercentage: z.coerce.number().min(0).max(100, "Discount must be between 0-100").optional(),
+  sponsoredBy: z.string().optional(),
 });
 
 type WorkshopFormValues = z.infer<typeof workshopSchema>;
@@ -81,16 +84,21 @@ export default function CreateWorkshopDialog({
       committeeId: undefined,
       locationAddress: "",
       materials: "",
+      baseCost: 0,
+      globalDiscountPercentage: 0,
+      sponsoredBy: "",
     },
   });
 
   // Create workshop mutation
   const createWorkshopMutation = useMutation({
     mutationFn: async (values: WorkshopFormValues) => {
-      // Convert the date to an ISO string for reliable server-side parsing
+      // Convert the date to an ISO string and dollars to cents
       const formattedValues = {
         ...values,
         date: values.date.toISOString(),
+        // Convert dollars to cents (baseCost is stored as integer in database)
+        baseCost: values.baseCost !== undefined && values.baseCost !== null ? Math.round(values.baseCost * 100) : null,
       };
       
       // Log the data being sent to the server for debugging
@@ -345,6 +353,76 @@ export default function CreateWorkshopDialog({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="baseCost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Base Cost (CAD)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        step="0.01"
+                        {...field}
+                        data-testid="input-baseCost"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Cost before member discounts
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="globalDiscountPercentage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sponsorship Discount (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        {...field}
+                        data-testid="input-globalDiscountPercentage"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Additional discount 0-100%
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="sponsoredBy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sponsored By (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter sponsor name or organization"
+                      {...field}
+                      data-testid="input-sponsoredBy"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Who is financially supporting this workshop?
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

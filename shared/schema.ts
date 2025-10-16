@@ -135,6 +135,14 @@ export const workshopTypes = pgTable("workshop_types", {
   description: text("description"),
 });
 
+export const membershipPricingRules = pgTable("membership_pricing_rules", {
+  id: serial("id").primaryKey(),
+  membershipLevel: text("membership_level").notNull().unique(),
+  percentagePaid: integer("percentage_paid").notNull(), // Percentage of base cost (0-100)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const workshops = pgTable("workshops", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -149,7 +157,9 @@ export const workshops = pgTable("workshops", {
   locationDetails: text("location_details"),
   materials: text("materials"), // Materials needed for the workshop
   isPaid: boolean("is_paid").default(false),
-  fee: integer("fee"),  // Store in cents for precision
+  baseCost: integer("base_cost"),  // Base cost in cents before membership discounts
+  globalDiscountPercentage: integer("global_discount_percentage").default(0), // Additional discount (0-100)
+  sponsoredBy: text("sponsored_by"), // Sponsor name/organization
   isOnline: boolean("is_online").default(false),
   meetingLink: text("meeting_link"),
   // Administrative fields
@@ -323,6 +333,12 @@ export const workshopTypeSchema = createInsertSchema(workshopTypes).omit({
   id: true,
 });
 
+export const membershipPricingRuleSchema = createInsertSchema(membershipPricingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Create workshop schema with extended validation
 export const workshopSchema = createInsertSchema(workshops)
   .omit({
@@ -397,3 +413,5 @@ export type InsertWorkshopRegistration = z.infer<typeof workshopRegistrationSche
 export type CommitteeRole = typeof committeeRoles.$inferSelect;
 export type CommitteeMember = typeof committeeMembers.$inferSelect;
 export type InsertMember = z.infer<typeof memberSchema>;
+export type MembershipPricingRule = typeof membershipPricingRules.$inferSelect;
+export type InsertMembershipPricingRule = z.infer<typeof membershipPricingRuleSchema>;

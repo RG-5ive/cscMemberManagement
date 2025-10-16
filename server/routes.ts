@@ -19,7 +19,9 @@ import {
   updateCalendarEventVisibilitySchema,
   demographicChangeRequests,
   insertDemographicChangeRequestSchema,
-  DemographicChangeRequest
+  DemographicChangeRequest,
+  membershipPricingRules,
+  membershipPricingRuleSchema
 } from "@shared/schema";
 import { randomInt } from "crypto";
 import { sendVerificationEmail, mockEmails } from "./mail-service";
@@ -2272,6 +2274,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Membership Pricing Rules Routes
+  // Get all membership pricing rules
+  app.get("/api/membership-pricing-rules", requireAuth, async (req, res) => {
+    try {
+      const rules = await db.select()
+        .from(membershipPricingRules)
+        .orderBy(membershipPricingRules.membershipLevel);
+      
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching membership pricing rules:", error);
+      res.status(500).json({ error: "Failed to fetch pricing rules" });
+    }
+  });
+
+  // Create or update a membership pricing rule (admin only)
+  app.post("/api/membership-pricing-rules", requireAuth, async (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only administrators can manage pricing rules" });
+    }
+
+    try {
+      const { membershipLevel, percentagePaid } = req.body;
+
+      if (!membershipLevel || percentagePaid === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (percentagePaid < 0 || percentagePaid > 100) {
+        return res.status(400).json({ error: "Percentage must be between 0 and 100" });
+      }
+
+      // Check if rule already exists
+      const [existingRule] = await db.select()
+        .from(membershipPricingRules)
+        .where(eq(membershipPricingRules.membershipLevel, membershipLevel));
+
+      if (existingRule) {
+        // Update existing rule
+        const [updatedRule] = await db.update(membershipPricingRules)
+          .set({ 
+            percentagePaid: Number(percentagePaid),
+            updatedAt: new Date()
+          })
+          .where(eq(membershipPricingRules.id, existingRule.id))
+          .returning();
+        
+        res.json(updatedRule);
+      } else {
+        // Create new rule
+        const [newRule] = await db.insert(membershipPricingRules)
+          .values({
+            membershipLevel,
+            percentagePaid: Number(percentagePaid)
+          })
+          .returning();
+        
+        res.status(201).json(newRule);
+      }
+    } catch (error) {
+      console.error("Error creating/updating pricing rule:", error);
+      res.status(500).json({ error: "Failed to create/update pricing rule" });
+    }
+  });
+
+  // Update a membership pricing rule (admin only)
+  app.patch("/api/membership-pricing-rules/:id", requireAuth, async (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only administrators can manage pricing rules" });
+    }
+
+    try {
+      const ruleId = parseInt(req.params.id);
+      const { percentagePaid } = req.body;
+
+      if (isNaN(ruleId)) {
+        return res.status(400).json({ error: "Invalid rule ID" });
+      }
+
+      if (percentagePaid === undefined) {
+        return res.status(400).json({ error: "Missing percentagePaid field" });
+      }
+
+      if (percentagePaid < 0 || percentagePaid > 100) {
+        return res.status(400).json({ error: "Percentage must be between 0 and 100" });
+      }
+
+      const [updatedRule] = await db.update(membershipPricingRules)
+        .set({ 
+          percentagePaid: Number(percentagePaid),
+          updatedAt: new Date()
+        })
+        .where(eq(membershipPricingRules.id, ruleId))
+        .returning();
+
+      if (!updatedRule) {
+        return res.status(404).json({ error: "Pricing rule not found" });
+      }
+
+      res.json(updatedRule);
+    } catch (error) {
+      console.error("Error updating pricing rule:", error);
+      res.status(500).json({ error: "Failed to update pricing rule" });
+    }
+  });
+
+  // Seed initial membership pricing rules (admin only)
+  app.post("/api/membership-pricing-rules/seed", requireAuth, async (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only administrators can seed pricing rules" });
+    }
+
+    try {
+      const defaultRules = [
+        { membershipLevel: "Full", percentagePaid: 100 },
+        { membershipLevel: "Full Retired", percentagePaid: 20 },
+        { membershipLevel: "LifeFull", percentagePaid: 20 },
+        { membershipLevel: "Associate", percentagePaid: 35 },
+        { membershipLevel: "Affiliate", percentagePaid: 60 },
+        { membershipLevel: "Student", percentagePaid: 60 },
+        { membershipLevel: "Companion", percentagePaid: 75 },
+      ];
+
+      const createdRules = [];
+      for (const rule of defaultRules) {
+        // Check if rule already exists
+        const [existing] = await db.select()
+          .from(membershipPricingRules)
+          .where(eq(membershipPricingRules.membershipLevel, rule.membershipLevel));
+
+        if (!existing) {
+          const [created] = await db.insert(membershipPricingRules)
+            .values(rule)
+            .returning();
+          createdRules.push(created);
+        }
+      }
+
+      res.json({ 
+        message: `Seeded ${createdRules.length} pricing rules`,
+        rules: createdRules 
+      });
+    } catch (error) {
+      console.error("Error seeding pricing rules:", error);
+      res.status(500).json({ error: "Failed to seed pricing rules" });
+    }
+  });
+
   // Workshop routes
   app.post("/api/workshops", requireAuth, async (req, res) => {
     if (!req.user || req.user.role !== "admin") {
@@ -2282,8 +2432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract and validate workshop data
       const { 
         title, description, date, capacity, committeeId, locationAddress,
-        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval,
-        startTime, endTime, materials
+        locationDetails, isPaid, baseCost, globalDiscountPercentage, sponsoredBy,
+        isOnline, meetingLink, requiresApproval, startTime, endTime, materials
       } = req.body;
       
       // Validate required fields
@@ -2323,7 +2473,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         locationAddress: locationAddress || null,
         locationDetails: locationDetails || null,
         isPaid: isPaid === true,
-        fee: fee ? Number(fee) : null,
+        baseCost: baseCost ? Number(baseCost) : null,
+        globalDiscountPercentage: globalDiscountPercentage ? Number(globalDiscountPercentage) : 0,
+        sponsoredBy: sponsoredBy || null,
         isOnline: isOnline === true,
         meetingLink: meetingLink || null,
         requiresApproval: requiresApproval === true,
@@ -2358,7 +2510,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         locationAddress: workshops.locationAddress,
         locationDetails: workshops.locationDetails,
         isPaid: workshops.isPaid,
-        fee: workshops.fee,
+        baseCost: workshops.baseCost,
+        globalDiscountPercentage: workshops.globalDiscountPercentage,
+        sponsoredBy: workshops.sponsoredBy,
         isOnline: workshops.isOnline,
         meetingLink: workshops.meetingLink,
         requiresApproval: workshops.requiresApproval,
@@ -2405,8 +2559,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract and validate update data
       const { 
         title, description, date, capacity, locationAddress, committeeId,
-        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval,
-        startTime, endTime, materials
+        locationDetails, isPaid, baseCost, globalDiscountPercentage, sponsoredBy,
+        isOnline, meetingLink, requiresApproval, startTime, endTime, materials
       } = req.body;
 
       // Prepare update data (only include fields that are provided)
@@ -2459,8 +2613,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.isPaid = isPaid === true;
       }
       
-      if (fee !== undefined) {
-        updateData.fee = fee ? Number(fee) : null;
+      if (baseCost !== undefined) {
+        updateData.baseCost = baseCost ? Number(baseCost) : null;
+      }
+      
+      if (globalDiscountPercentage !== undefined) {
+        updateData.globalDiscountPercentage = globalDiscountPercentage ? Number(globalDiscountPercentage) : 0;
+      }
+      
+      if (sponsoredBy !== undefined) {
+        updateData.sponsoredBy = sponsoredBy || null;
       }
       
       if (isOnline !== undefined) {
@@ -2765,10 +2927,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         locationAddress: workshops.locationAddress,
         locationDetails: workshops.locationDetails,
         isPaid: workshops.isPaid,
-        fee: workshops.fee,
+        baseCost: workshops.baseCost,
+        globalDiscountPercentage: workshops.globalDiscountPercentage,
+        sponsoredBy: workshops.sponsoredBy,
         isOnline: workshops.isOnline,
         meetingLink: workshops.meetingLink,
-        requiresApproval: workshops.requiresApproval
+        requiresApproval: workshops.requiresApproval,
+        startTime: workshops.startTime,
+        endTime: workshops.endTime,
+        materials: workshops.materials
       })
       .from(workshops)
       .leftJoin(
@@ -3028,11 +3195,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date: workshops.date,
         capacity: workshops.capacity,
         isPaid: workshops.isPaid,
-        fee: workshops.fee,
+        baseCost: workshops.baseCost,
+        globalDiscountPercentage: workshops.globalDiscountPercentage,
+        sponsoredBy: workshops.sponsoredBy,
         isOnline: workshops.isOnline,
         meetingLink: workshops.meetingLink,
         locationAddress: workshops.locationAddress,
         locationDetails: workshops.locationDetails,
+        startTime: workshops.startTime,
+        endTime: workshops.endTime,
+        materials: workshops.materials,
         committeeName: committees.name,
         // Registration details
         registrationId: workshopRegistrations.id,
