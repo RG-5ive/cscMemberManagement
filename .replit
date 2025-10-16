@@ -23,10 +23,6 @@ exposeLocalhost = true
 localPort = 33647
 externalPort = 3001
 
-[[ports]]
-localPort = 38587
-externalPort = 3002
-
 [workflows]
 runButton = "Start application"
 
