@@ -95,8 +95,8 @@ export default function WorkshopsPage() {
 
       const registration = await response.json();
 
-      // Check if workshop requires payment
-      if (workshop.isPaid && workshop.baseCost && workshop.baseCost > 0) {
+      // Check if workshop requires payment (any workshop with a cost requires payment)
+      if (workshop.baseCost && workshop.baseCost > 0) {
         // Show payment dialog
         setPendingPayment({
           workshopId: workshop.id,
@@ -104,6 +104,11 @@ export default function WorkshopsPage() {
           registrationId: registration.id,
         });
         setPaymentDialogOpen(true);
+        
+        toast({
+          title: "Registration Successful",
+          description: "Please complete your payment to confirm registration",
+        });
       } else {
         // Free workshop - registration complete
         toast({
