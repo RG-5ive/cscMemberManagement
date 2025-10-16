@@ -182,7 +182,7 @@ export default function WorkshopsPage() {
         ) : user?.memberLevel && (
           <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
             <p className="text-sm">
-              🎉 As a <strong>{user.memberLevel}</strong>, you enjoy exclusive member pricing on all workshops.{" "}
+              As a <strong>{user.memberLevel}</strong>, you enjoy exclusive member pricing on all workshops.{" "}
               <Link href="/pricing" className="text-primary font-medium hover:underline">
                 View your pricing benefits →
               </Link>
@@ -542,7 +542,7 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
         <p className="text-sm">{workshop.description}</p>
         {workshop.locationAddress && (
           <div className="flex items-center mt-2">
-            <span className="text-xs text-muted-foreground">📍 {workshop.locationAddress}</span>
+            <span className="text-xs text-muted-foreground">{workshop.locationAddress}</span>
           </div>
         )}
         {workshop.materials && (
@@ -588,6 +588,11 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
             <p className="text-xs text-muted-foreground mt-2">
               {user?.memberLevel} pricing • <Link href="/pricing" className="text-primary hover:underline">View all tiers</Link>
             </p>
+            {priceInfo.finalPrice !== "0.00" && (
+              <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+                Payment required after registration
+              </p>
+            )}
           </div>
         ) : workshop.baseCost && workshop.baseCost > 0 ? (
           <div className="mt-4 pt-4 border-t">
@@ -613,12 +618,15 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
             onClick={handleRegisterClick}
             disabled={isRegistering}
             className="w-full"
+            data-testid="button-register-workshop"
           >
             {isRegistering ? (
               <>
                 <LoadingSpinner size="sm" />
-                <span className="ml-2">Registering...</span>
+                <span className="ml-2">Processing...</span>
               </>
+            ) : workshop.baseCost && workshop.baseCost > 0 ? (
+              "Register & Proceed to Payment"
             ) : (
               "Register Now"
             )}
