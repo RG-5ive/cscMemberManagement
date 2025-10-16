@@ -292,8 +292,8 @@ export default function WorkshopsPage() {
                                         onCheckedChange={(checked) => 
                                           handleUpdateVisibility(workshop.id, {
                                             visibleToGeneralMembers: checked,
-                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs,
-                                            visibleToAdmins: workshop.visibleToAdmins
+                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs ?? undefined,
+                                            visibleToAdmins: workshop.visibleToAdmins ?? undefined
                                           })
                                         }
                                         className="data-[state=checked]:bg-emerald-500"
@@ -305,9 +305,9 @@ export default function WorkshopsPage() {
                                         checked={workshop.visibleToCommitteeChairs || false}
                                         onCheckedChange={(checked) => 
                                           handleUpdateVisibility(workshop.id, {
-                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers,
+                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers ?? undefined,
                                             visibleToCommitteeChairs: checked,
-                                            visibleToAdmins: workshop.visibleToAdmins
+                                            visibleToAdmins: workshop.visibleToAdmins ?? undefined
                                           })
                                         }
                                         className="data-[state=checked]:bg-sky-500"
@@ -319,8 +319,8 @@ export default function WorkshopsPage() {
                                         checked={workshop.visibleToAdmins !== false}
                                         onCheckedChange={(checked) => 
                                           handleUpdateVisibility(workshop.id, {
-                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers,
-                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs,
+                                            visibleToGeneralMembers: workshop.visibleToGeneralMembers ?? undefined,
+                                            visibleToCommitteeChairs: workshop.visibleToCommitteeChairs ?? undefined,
                                             visibleToAdmins: checked
                                           })
                                         }
