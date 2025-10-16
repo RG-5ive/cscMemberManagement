@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { Workshop } from '@shared/schema';
 import { Link } from 'wouter';
@@ -110,7 +111,7 @@ export function AdminDashboard() {
                   {displayStats.activeMembers} Active ({activePercentage}%)
                 </div>
               </div>
-              <Button asChild className="w-full bg-sky-400 hover:bg-sky-500 dark:bg-sky-600 dark:hover:bg-sky-700">
+              <Button asChild className="w-full bg-sky-700 hover:bg-sky-800 dark:bg-sky-700 dark:hover:bg-sky-800">
                 <Link href="/member-statistics">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Member Statistics
@@ -141,7 +142,7 @@ export function AdminDashboard() {
                   Full Database
                 </div>
               </div>
-              <Button asChild className="w-full bg-amber-400 hover:bg-amber-500 dark:bg-amber-600 dark:hover:bg-amber-700">
+              <Button asChild className="w-full bg-amber-700 hover:bg-amber-800 dark:bg-amber-700 dark:hover:bg-amber-800">
                 <Link href="/admin/members">
                   <Users className="h-4 w-4 mr-2" />
                   View All Members
@@ -172,7 +173,7 @@ export function AdminDashboard() {
                   Management Tools
                 </div>
               </div>
-              <Button asChild className="w-full bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-700">
+              <Button asChild className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800">
                 <Link href="/workshops">
                   <Calendar className="h-4 w-4 mr-2" />
                   Manage Workshops
@@ -203,7 +204,7 @@ export function AdminDashboard() {
                   Bot Management
                 </div>
               </div>
-              <Button asChild className="w-full bg-violet-400 hover:bg-violet-500 dark:bg-violet-600 dark:hover:bg-violet-700">
+              <Button asChild className="w-full bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-800">
                 <Link href="/admin/discord">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Manage Discord Server
@@ -227,12 +228,17 @@ export function AdminDashboard() {
         <DiscordManagement />
       </div>
 
-      {/* Admin Calendar Section */}
+      {/* Admin Master Calendar Section */}
       <div className="mt-8">
         <div className="mb-4">
-          <h2 className="text-2xl font-bold">Admin Calendar</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            Master Calendar
+            <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+              Admin Control
+            </Badge>
+          </h2>
           <p className="text-muted-foreground font-medium">
-            Manage events and workshops with role-based visibility controls
+            Create events in the Master Calendar and publish them to Member Calendar, Committee Calendar, or Admin Calendar using visibility controls
           </p>
         </div>
         <EnhancedCalendar readOnly={false} />

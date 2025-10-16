@@ -250,10 +250,10 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            Calendar
+            {isAdmin ? 'Master Calendar' : 'Calendar'}
             {isAdmin && (
-              <Badge variant="secondary" className="ml-2">
-                Admin View
+              <Badge variant="secondary" className="ml-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                Admin Control Center
               </Badge>
             )}
           </CardTitle>
@@ -353,10 +353,10 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm text-blue-700">
-                        <strong>Visibility:</strong> New events are initially visible only to administrators and committee chairs. 
-                        Administrators can later make events visible to general members.
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        📋 <strong>Master Calendar:</strong> New events are created in the Master Calendar and visible only to administrators and committee chairs initially. 
+                        You can publish events to Member Calendar and Committee Calendar after creation using the visibility controls.
                       </p>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -466,15 +466,26 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
                 </div>
               )}
               
-              {/* Admin Visibility Controls */}
+              {/* Admin Master Calendar Controls */}
               {isAdmin && !selectedEvent.id.startsWith('workshop-') && (
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-3">Event Visibility</h4>
+                <div className="border-t pt-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg -mx-2">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    Master Calendar - Publish Event To:
+                  </h4>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Control which calendars receive this event. Toggle to publish or unpublish.
+                  </p>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="general-members" className="text-sm">
-                        General Members
-                      </Label>
+                    <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-md border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex-1">
+                        <Label htmlFor="general-members" className="text-sm font-medium">
+                          📅 Member Calendar
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {selectedEvent.visibleToGeneralMembers ? 'Published to all members' : 'Not published'}
+                        </p>
+                      </div>
                       <div className="relative">
                         <Switch
                           id="general-members"
@@ -486,17 +497,22 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
                               visibleToAdmins: selectedEvent.visibleToAdmins
                             })
                           }
-                          className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300"
+                          className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-gray-300"
                         />
                         {selectedEvent.visibleToGeneralMembers && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="committee-chairs" className="text-sm">
-                        Committee Chairs
-                      </Label>
+                    <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-md border border-sky-200 dark:border-sky-800">
+                      <div className="flex-1">
+                        <Label htmlFor="committee-chairs" className="text-sm font-medium">
+                          📋 Committee Calendar
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {selectedEvent.visibleToCommitteeChairs ? 'Published to chairs & co-chairs' : 'Not published'}
+                        </p>
+                      </div>
                       <div className="relative">
                         <Switch
                           id="committee-chairs"
@@ -508,17 +524,22 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
                               visibleToAdmins: selectedEvent.visibleToAdmins
                             })
                           }
-                          className="data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-gray-300"
+                          className="data-[state=checked]:bg-sky-500 data-[state=unchecked]:bg-gray-300"
                         />
                         {selectedEvent.visibleToCommitteeChairs && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-sky-400 rounded-full animate-pulse" />
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="admins" className="text-sm">
-                        Administrators
-                      </Label>
+                    <div className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-md border border-violet-200 dark:border-violet-800">
+                      <div className="flex-1">
+                        <Label htmlFor="admins" className="text-sm font-medium">
+                          ⚙️ Admin Calendar
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {selectedEvent.visibleToAdmins ? 'Published to administrators' : 'Not published'}
+                        </p>
+                      </div>
                       <div className="relative">
                         <Switch
                           id="admins"
