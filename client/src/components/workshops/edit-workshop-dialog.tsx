@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,9 +40,12 @@ const editWorkshopSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   date: z.date(),
-  time: z.string().min(1, "Time is required"),
-  location: z.string().min(1, "Location is required"),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   capacity: z.coerce.number().int().min(1, "Capacity must be at least 1"),
+  committeeId: z.coerce.number().optional(),
+  locationAddress: z.string().optional(),
+  materials: z.string().optional(),
 });
 
 type EditWorkshopFormValues = z.infer<typeof editWorkshopSchema>;
@@ -63,6 +67,11 @@ export default function EditWorkshopDialog({
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch committees for dropdown
+  const { data: committees = [] } = useQuery<any[]>({
+    queryKey: ["/api/committees"],
+  });
+
   // Form definition
   const form = useForm<EditWorkshopFormValues>({
     resolver: zodResolver(editWorkshopSchema),
@@ -70,9 +79,12 @@ export default function EditWorkshopDialog({
       title: "",
       description: "",
       date: new Date(),
-      time: "",
-      location: "",
+      startTime: "",
+      endTime: "",
       capacity: 20,
+      committeeId: undefined,
+      locationAddress: "",
+      materials: "",
     },
   });
 
@@ -80,15 +92,17 @@ export default function EditWorkshopDialog({
   useEffect(() => {
     if (workshop) {
       const workshopDate = new Date(workshop.date);
-      const timeString = format(workshopDate, "HH:mm");
       
       form.reset({
         title: workshop.title,
         description: workshop.description,
         date: workshopDate,
-        time: timeString,
-        location: workshop.locationAddress || "",
+        startTime: workshop.startTime || "",
+        endTime: workshop.endTime || "",
         capacity: workshop.capacity,
+        committeeId: workshop.committeeId || undefined,
+        locationAddress: workshop.locationAddress || "",
+        materials: workshop.materials || "",
       });
     }
   }, [workshop, form]);
@@ -97,18 +111,17 @@ export default function EditWorkshopDialog({
   const updateWorkshopMutation = useMutation({
     mutationFn: async (values: EditWorkshopFormValues) => {
       if (!workshop) throw new Error("No workshop to update");
-      
-      // Combine date and time
-      const [hours, minutes] = values.time.split(':').map(Number);
-      const combinedDateTime = new Date(values.date);
-      combinedDateTime.setHours(hours, minutes, 0, 0);
 
       const updateData = {
         title: values.title,
         description: values.description,
-        date: combinedDateTime.toISOString(),
-        locationAddress: values.location,
+        date: values.date.toISOString(),
+        startTime: values.startTime || null,
+        endTime: values.endTime || null,
         capacity: values.capacity,
+        committeeId: values.committeeId || null,
+        locationAddress: values.locationAddress || null,
+        materials: values.materials || null,
       };
 
       const response = await apiRequest("PATCH", `/api/workshops/${workshop.id}`, updateData);
@@ -199,42 +212,56 @@ export default function EditWorkshopDialog({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={false}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="date"
+                name="startTime"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={false}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -242,16 +269,66 @@ export default function EditWorkshopDialog({
 
               <FormField
                 control={form.control}
-                name="time"
+                name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel>End Time</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="capacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Capacity</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Enter maximum participants"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormDescription>
-                      Select the start time for the workshop
+                      Maximum number of participants
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="committeeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Committee (Optional)</FormLabel>
+                    <Select
+                      value={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a committee" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">None</SelectItem>
+                        {committees.map((committee) => (
+                          <SelectItem key={committee.id} value={committee.id.toString()}>
+                            {committee.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -260,10 +337,10 @@ export default function EditWorkshopDialog({
 
             <FormField
               control={form.control}
-              name="location"
+              name="locationAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Location (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter workshop location" {...field} />
                   </FormControl>
@@ -274,21 +351,17 @@ export default function EditWorkshopDialog({
 
             <FormField
               control={form.control}
-              name="capacity"
+              name="materials"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Capacity</FormLabel>
+                  <FormLabel>Materials Needed (Optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Enter maximum participants"
+                    <Textarea
+                      placeholder="List any materials participants should bring"
+                      rows={3}
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Maximum number of participants who can register
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

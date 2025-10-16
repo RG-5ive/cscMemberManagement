@@ -140,11 +140,14 @@ export const workshops = pgTable("workshops", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   date: timestamp("date").notNull(),
+  startTime: text("start_time"), // Format: "HH:mm" (24-hour)
+  endTime: text("end_time"), // Format: "HH:mm" (24-hour)
   capacity: integer("capacity").notNull(),
   // New fields
   committeeId: integer("committee_id").references(() => committees.id),
   locationAddress: text("location_address"),
   locationDetails: text("location_details"),
+  materials: text("materials"), // Materials needed for the workshop
   isPaid: boolean("is_paid").default(false),
   fee: integer("fee"),  // Store in cents for precision
   isOnline: boolean("is_online").default(false),

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +39,12 @@ const workshopSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   date: z.date(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   capacity: z.coerce.number().int().min(1, "Capacity must be at least 1"),
+  committeeId: z.coerce.number().optional(),
+  locationAddress: z.string().optional(),
+  materials: z.string().optional(),
 });
 
 type WorkshopFormValues = z.infer<typeof workshopSchema>;
@@ -57,6 +63,11 @@ export default function CreateWorkshopDialog({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch committees for dropdown
+  const { data: committees = [] } = useQuery<any[]>({
+    queryKey: ["/api/committees"],
+  });
+
   // Form definition
   const form = useForm<WorkshopFormValues>({
     resolver: zodResolver(workshopSchema),
@@ -64,7 +75,12 @@ export default function CreateWorkshopDialog({
       title: "",
       description: "",
       date: new Date(),
+      startTime: "",
+      endTime: "",
       capacity: 20,
+      committeeId: undefined,
+      locationAddress: "",
+      materials: "",
     },
   });
 
@@ -227,6 +243,100 @@ export default function CreateWorkshopDialog({
                 )}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="endTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="committeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Committee (Optional)</FormLabel>
+                  <Select
+                    value={field.value?.toString()}
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a committee" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="0">None</SelectItem>
+                      {committees.map((committee) => (
+                        <SelectItem key={committee.id} value={committee.id.toString()}>
+                          {committee.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Which committee is organizing this workshop
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="locationAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter workshop location" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="materials"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Materials Needed (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="List any materials participants should bring"
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>

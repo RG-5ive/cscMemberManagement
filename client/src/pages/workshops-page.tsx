@@ -268,6 +268,9 @@ interface WorkshopCardProps {
 
 function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardProps) {
   const [isRegistering, setIsRegistering] = useState(false);
+  const { data: committees = [] } = useQuery<any[]>({
+    queryKey: ["/api/committees"],
+  });
 
   const handleRegisterClick = async () => {
     setIsRegistering(true);
@@ -278,6 +281,8 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
     }
   };
 
+  const committee = committees.find(c => c.id === workshop.committeeId);
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -287,14 +292,33 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
             <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
             <span>{format(new Date(workshop.date), "MMMM d, yyyy")}</span>
           </div>
-          <div className="flex items-center mt-1">
-            <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-            <span>{format(new Date(workshop.date), "h:mm a")}</span>
-          </div>
+          {workshop.startTime && workshop.endTime && (
+            <div className="flex items-center mt-1">
+              <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span>{workshop.startTime} - {workshop.endTime}</span>
+            </div>
+          )}
+          {committee && (
+            <div className="flex items-center mt-1">
+              <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span className="text-xs font-medium">{committee.name}</span>
+            </div>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1">
         <p className="text-sm">{workshop.description}</p>
+        {workshop.locationAddress && (
+          <div className="flex items-center mt-2">
+            <span className="text-xs text-muted-foreground">📍 {workshop.locationAddress}</span>
+          </div>
+        )}
+        {workshop.materials && (
+          <div className="mt-2">
+            <p className="text-xs font-medium text-muted-foreground">Materials Needed:</p>
+            <p className="text-xs text-muted-foreground mt-1">{workshop.materials}</p>
+          </div>
+        )}
         <div className="flex items-center mt-3">
           <Users className="h-4 w-4 mr-2 text-muted-foreground" />
           <span className="text-sm">Capacity: {workshop.capacity} attendees</span>
