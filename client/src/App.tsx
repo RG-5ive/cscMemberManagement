@@ -157,11 +157,15 @@ function Router() {
 const AppContent = () => {
   // Import the auth hook
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+  
+  // Don't show navbar on login pages
+  const hideNavbar = location === '/auth' || location === '/admin-login' || location === '/chair-login' || !user;
   
   return (
     <>
       <CookieRefresher />
-
+      {!hideNavbar && <Navbar />}
       <Router />
       <Toaster />
     </>
