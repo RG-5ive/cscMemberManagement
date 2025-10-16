@@ -103,7 +103,7 @@ export function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 space-y-1">
                 <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
                   {displayStats.totalMembers} Members
                 </div>
@@ -134,7 +134,7 @@ export function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 space-y-1">
                 <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                   {displayStats.totalMembers} Records
                 </div>
@@ -165,7 +165,7 @@ export function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 space-y-1">
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {workshops?.length || 1} Workshops
                 </div>
@@ -196,7 +196,7 @@ export function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 space-y-1">
                 <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                   Community Hub
                 </div>
