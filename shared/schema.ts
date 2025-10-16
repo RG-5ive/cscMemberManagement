@@ -152,7 +152,6 @@ export const workshops = pgTable("workshops", {
   fee: integer("fee"),  // Store in cents for precision
   isOnline: boolean("is_online").default(false),
   meetingLink: text("meeting_link"),
-  workshopTypeId: integer("workshop_type_id").references(() => workshopTypes.id),
   // Administrative fields
   requiresApproval: boolean("requires_approval").default(false),
   createdById: integer("created_by_id").references(() => users.id),
