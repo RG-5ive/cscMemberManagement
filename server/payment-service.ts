@@ -100,7 +100,8 @@ export class PaymentService {
     user: User,
     memberProvince?: string | null
   ): Promise<PricingBreakdown> {
-    if (!workshop.isPaid || !workshop.baseCost) {
+    // Check if workshop has a cost (baseCost > 0 means paid workshop)
+    if (!workshop.baseCost || workshop.baseCost === 0) {
       // Free workshop
       return {
         baseCost: 0,
