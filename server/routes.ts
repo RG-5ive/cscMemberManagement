@@ -2282,7 +2282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract and validate workshop data
       const { 
         title, description, date, capacity, committeeId, locationAddress,
-        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval
+        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval,
+        startTime, endTime, materials
       } = req.body;
       
       // Validate required fields
@@ -2326,7 +2327,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isOnline: isOnline === true,
         meetingLink: meetingLink || null,
         requiresApproval: requiresApproval === true,
-        createdById: req.user.id
+        createdById: req.user.id,
+        startTime: startTime || null,
+        endTime: endTime || null,
+        materials: materials || null
       };
 
       const [workshop] = await db.insert(workshops)
@@ -2357,7 +2361,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fee: workshops.fee,
         isOnline: workshops.isOnline,
         meetingLink: workshops.meetingLink,
-        requiresApproval: workshops.requiresApproval
+        requiresApproval: workshops.requiresApproval,
+        startTime: workshops.startTime,
+        endTime: workshops.endTime,
+        materials: workshops.materials
       })
       .from(workshops)
       .leftJoin(
@@ -2397,8 +2404,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Extract and validate update data
       const { 
-        title, description, date, capacity, location_address,
-        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval
+        title, description, date, capacity, locationAddress, committeeId,
+        locationDetails, isPaid, fee, isOnline, meetingLink, requiresApproval,
+        startTime, endTime, materials
       } = req.body;
 
       // Prepare update data (only include fields that are provided)
@@ -2439,8 +2447,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.capacity = capacityNum;
       }
       
-      if (location_address !== undefined) {
-        updateData.locationAddress = location_address || null;
+      if (locationAddress !== undefined) {
+        updateData.locationAddress = locationAddress || null;
       }
       
       if (locationDetails !== undefined) {
@@ -2465,6 +2473,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (requiresApproval !== undefined) {
         updateData.requiresApproval = requiresApproval === true;
+      }
+      
+      if (committeeId !== undefined) {
+        updateData.committeeId = committeeId || null;
+      }
+      
+      if (startTime !== undefined) {
+        updateData.startTime = startTime || null;
+      }
+      
+      if (endTime !== undefined) {
+        updateData.endTime = endTime || null;
+      }
+      
+      if (materials !== undefined) {
+        updateData.materials = materials || null;
       }
 
       // Perform the update
