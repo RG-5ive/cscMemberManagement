@@ -24,7 +24,7 @@ localPort = 33647
 externalPort = 3001
 
 [[ports]]
-localPort = 33761
+localPort = 45267
 externalPort = 3003
 
 [[ports]]
@@ -59,4 +59,4 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_websocket:1.0.0", "javascript_sendgrid:1.0.0"]
+integrations = ["javascript_websocket:1.0.0", "javascript_sendgrid:1.0.0", "javascript_stripe:1.0.0"]

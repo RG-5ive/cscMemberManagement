@@ -1,0 +1,61 @@
+Goal: Add workshop registration + payments (Interac e-Transfer for Business and credit cards) to our Canadian web app with admin and member portals. All settlements are in CAD.
+Tech assumptions: Use our existing stack (keep it generic: REST + PostgreSQL). Follow best practices for security (no raw card handling, use hosted UI, signed webhooks, idempotency keys).
+Deliverables:
+Data model (DDL):
+users(id, email, name, role)
+workshops(id, title, description, start_at, end_at, capacity, price_cad, tax_rate, refund_policy_json, visibility)
+registrations(id, user_id, workshop_id, status ENUM('pending_payment','paid','cancelled','failed'), seats, created_at)
+payments(id, registration_id, method ENUM('card','interac'), provider ENUM('stripe','nuvei','paysafe','vopay','jpm'), provider_ref, amount_cad, fee_cad, fx_rate_meta_json, status, created_at)
+invoices(id, registration_id, invoice_no, subtotal_cad, tax_cad, total_cad, issued_at, pdf_url)
+exchange_rates(id, base='CAD', quote, rate, as_of_date) (cache BoC rates daily)
+audit_logs(id, actor_id, action, entity, entity_id, payload_json, created_at)
+Admin endpoints:
+POST /admin/workshops (create)
+PUT /admin/workshops/:id (update)
+GET /admin/reports/payments?from&to&method (CSV export)
+All actions write to audit_logs.
+Member endpoints & pages:
+GET /workshops/calendar (list upcoming; filter by month)
+POST /registrations → create pending_payment and return registration_id
+POST /payments/:registration_id/checkout with {method}:
+If card: Create Stripe PaymentIntent/Checkout Session for CAD total (subtotal + tax). Return redirect URL or client secret.
+If interac: Call chosen Interac PSP API to Request Money for the exact CAD total; store provider_ref and return an instruction payload (or redirect to provider link).
+Webhooks (MUST be idempotent):
+/webhooks/stripe → on successful payment, set payments.status='succeeded', registrations.status='paid', generate invoice and email receipt.
+/webhooks/interac (Nuvei/Paysafe/VoPay/JPM per chosen provider) → on Completed, same as above; on Expired or Declined, set failed. Include retries and signature verification.
+Currency handling (always settle CAD):
+Quoting: If a member’s browser locale/currency ≠ CAD, show an estimated CAD total using Bank of Canada Valet API rates (/valet/observations/group/FX_RATES_DAILY?start_end=today, cache daily). Store the rate used for the estimate in fx_rate_meta_json. At payment time:
+Card: create the intent in CAD (Stripe will convert when charging non-CAD cards; we capture in CAD).
+Interac: always CAD.
+Add a footer note: “All charges are in CAD. Exchange rates for previews use Bank of Canada daily averages; your bank/processor may differ.”
+Taxes & refunds:
+Compute GST/HST based on the organization’s province (inject TAX_ORIGIN_PROVINCE) and member province if required.
+Implement POST /admin/refunds/:payment_id → initiate refund via provider; update payments and invoices.
+Security & compliance:
+Use hosted card UI (Stripe Checkout/Elements). Never handle PANs. Verify webhook signatures. Log every state change in audit_logs.
+Rate-limit payment routes; enforce CSRF on non-webhook endpoints; store minimal PII (PIPEDA mindful).
+UX specifics:
+Calendar → Workshop detail → Register → Choose payment → Pay → Confirmation page + email receipt (PDF).
+Show a “Pending Interac payment” badge with instructions and a “I’ve sent the transfer” info state; final confirmation only after webhook.
+Testing:
+Unit tests for totals (subtotal, tax, total), idempotent webhooks, and state transitions.
+Integration tests simulating Stripe success + Interac success/expiry.
+Config (ENV):
+STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET
+INTERAC_PROVIDER = nuvei|paysafe|vopay|jpm + corresponding keys/secrets + webhook secret
+BocRatesUrl=https://www.bankofcanada.ca/valet/ (cache daily, 24h TTL)
+Acceptance criteria
+Admin can publish a workshop; members can register and pay by card or Interac.
+Successful payments flip registration to paid, issue an invoice PDF, and email receipt.
+Failed/expired Interac attempts revert cleanly.
+Reports export CSV with gross, fees, net, and tax.
+All amounts are stored and settled in CAD; non-CAD displays are estimates from BoC rates.
+3) Notes on auto-converting to CAD
+Cards: Implement CAD-denominated PaymentIntents; Stripe handles conversion when a non-CAD card is used (or you can enable localized presentment with Adaptive Pricing; you still settle in CAD). 
+Stripe Docs
++1
+Interac: Always CAD by design; use Request Money + Autodeposit for smooth, automatic reconciliation. 
+Interac
+Reference rates for UI estimates: Use Bank of Canada Valet API daily rates (JSON/CSV/XML). Cache once per day after 16:30 ET. 
+Bank of Canada
++1

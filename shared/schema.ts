@@ -391,6 +391,100 @@ export const workshopRegistrationSchema = createInsertSchema(workshopRegistratio
     paymentConfirmedAt: true,
   });
 
+// Payment system tables
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  workshopRegistrationId: integer("workshop_registration_id").references(() => workshopRegistrations.id).notNull(),
+  method: text("method", { 
+    enum: ["stripe_card", "interac_transfer", "bank_transfer"] 
+  }).notNull(),
+  amountCad: integer("amount_cad").notNull(), // Amount in cents
+  amountOriginal: integer("amount_original"), // If paid in different currency
+  currency: text("currency").default("CAD"),
+  exchangeRateId: integer("exchange_rate_id").references(() => exchangeRates.id),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  providerPaymentId: text("provider_payment_id"), // For Interac or other providers
+  status: text("status", {
+    enum: ["initiated", "requires_action", "pending_settlement", "succeeded", "failed", "refunded", "cancelled"]
+  }).default("initiated").notNull(),
+  metadata: json("metadata"), // Store additional provider-specific data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  workshopRegistrationId: integer("workshop_registration_id").references(() => workshopRegistrations.id).notNull().unique(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  subtotalCad: integer("subtotal_cad").notNull(), // Amount in cents
+  taxCad: integer("tax_cad").notNull(), // Amount in cents
+  totalCad: integer("total_cad").notNull(), // Amount in cents
+  taxRate: integer("tax_rate").notNull(), // Percentage (e.g., 5 for 5%, 13 for 13%)
+  taxType: text("tax_type", {
+    enum: ["GST", "HST", "GST_PST", "PST", "None"]
+  }).default("GST").notNull(),
+  dueDate: timestamp("due_date"),
+  issuedAt: timestamp("issued_at").defaultNow(),
+  paidAt: timestamp("paid_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  pdfUrl: text("pdf_url"),
+  emailSentAt: timestamp("email_sent_at"),
+  status: text("status", {
+    enum: ["draft", "sent", "paid", "cancelled"]
+  }).default("draft").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const exchangeRates = pgTable("exchange_rates", {
+  id: serial("id").primaryKey(),
+  baseCurrency: text("base_currency").default("CAD").notNull(),
+  targetCurrency: text("target_currency").notNull(),
+  rate: text("rate").notNull(), // Store as string to preserve precision
+  source: text("source", {
+    enum: ["bank_of_canada", "manual"]
+  }).default("bank_of_canada").notNull(),
+  retrievedAt: timestamp("retrieved_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  actorUserId: integer("actor_user_id").references(() => users.id),
+  entityType: text("entity_type", {
+    enum: ["payment", "invoice", "registration", "workshop", "user", "member"]
+  }).notNull(),
+  entityId: integer("entity_id").notNull(),
+  action: text("action").notNull(), // e.g., "created", "updated", "deleted", "paid", "refunded"
+  before: json("before"), // State before the change
+  after: json("after"), // State after the change
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Create schemas for payment tables
+export const paymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const invoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const exchangeRateSchema = createInsertSchema(exchangeRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const auditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Message = typeof messages.$inferSelect;
@@ -419,3 +513,11 @@ export type CommitteeMember = typeof committeeMembers.$inferSelect;
 export type InsertMember = z.infer<typeof memberSchema>;
 export type MembershipPricingRule = typeof membershipPricingRules.$inferSelect;
 export type InsertMembershipPricingRule = z.infer<typeof membershipPricingRuleSchema>;
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof paymentSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof invoiceSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type InsertExchangeRate = z.infer<typeof exchangeRateSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof auditLogSchema>;
