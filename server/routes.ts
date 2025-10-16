@@ -2518,7 +2518,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresApproval: workshops.requiresApproval,
         startTime: workshops.startTime,
         endTime: workshops.endTime,
-        materials: workshops.materials
+        materials: workshops.materials,
+        visibleToGeneralMembers: workshops.visibleToGeneralMembers,
+        visibleToCommitteeChairs: workshops.visibleToCommitteeChairs,
+        visibleToAdmins: workshops.visibleToAdmins
       })
       .from(workshops)
       .leftJoin(
