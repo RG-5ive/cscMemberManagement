@@ -3187,6 +3187,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe webhook handler
+  app.post("/api/webhooks/stripe", express.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe not configured" });
+    }
+
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    if (!sig) {
+      console.error("Missing stripe signature");
+      return res.status(400).json({ error: "Missing stripe signature" });
+    }
+
+    try {
+      let event;
+
+      // Verify webhook signature if webhook secret is configured
+      if (webhookSecret) {
+        event = stripe.webhooks.constructEvent(
+          req.body, 
+          sig as string, 
+          webhookSecret
+        );
+      } else {
+        // For development without webhook secret (NOT RECOMMENDED FOR PRODUCTION)
+        console.warn("WARNING: Processing webhook without signature verification. Set STRIPE_WEBHOOK_SECRET for production.");
+        event = JSON.parse(req.body.toString());
+      }
+
+      // Handle the event
+      switch (event.type) {
+        case 'payment_intent.succeeded': {
+          const paymentIntent = event.data.object;
+          
+          // Find payment by stripe payment intent ID
+          const [payment] = await db.select()
+            .from(payments)
+            .where(eq(payments.stripePaymentIntentId, paymentIntent.id));
+
+          if (payment) {
+            // Update payment status
+            await db.update(payments)
+              .set({
+                status: "succeeded",
+                settledAt: new Date(),
+              })
+              .where(eq(payments.id, payment.id));
+
+            // Update workshop registration
+            await db.update(workshopRegistrations)
+              .set({
+                paymentStatus: "paid",
+                isApproved: true,
+              })
+              .where(eq(workshopRegistrations.id, payment.workshopRegistrationId!));
+
+            // Update invoice
+            await db.update(invoices)
+              .set({
+                status: "paid",
+                paidAt: new Date(),
+              })
+              .where(eq(invoices.workshopRegistrationId, payment.workshopRegistrationId!));
+
+            // Log audit trail
+            await db.insert(auditLogs)
+              .values({
+                entityType: "payment",
+                entityId: payment.id,
+                action: "payment_completed",
+                after: { paymentIntentId: paymentIntent.id, status: "completed" },
+              });
+
+            console.log(`Payment ${payment.id} completed successfully`);
+          }
+          break;
+        }
+
+        case 'payment_intent.payment_failed': {
+          const paymentIntent = event.data.object;
+          
+          const [payment] = await db.select()
+            .from(payments)
+            .where(eq(payments.stripePaymentIntentId, paymentIntent.id));
+
+          if (payment) {
+            await db.update(payments)
+              .set({
+                status: "failed",
+                metadata: {
+                  ...(payment.metadata || {}),
+                  error: paymentIntent.last_payment_error,
+                },
+              })
+              .where(eq(payments.id, payment.id));
+
+            console.log(`Payment ${payment.id} failed`);
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.status(400).json({ error: "Webhook handler failed" });
+    }
+  });
+
   // Get a single workshop by ID
   app.get("/api/workshops/:id", requireAuth, async (req, res) => {
     try {

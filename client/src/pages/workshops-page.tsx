@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WorkshopParticipantsManager } from "@/components/admin/workshop-participants-manager";
 import { Link } from "wouter";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 
 export default function WorkshopsPage() {
   const { toast } = useToast();
@@ -27,6 +28,8 @@ export default function WorkshopsPage() {
   const [editingWorkshop, setEditingWorkshop] = useState<Workshop | null>(null);
   const [activeTab, setActiveTab] = useState("available");
   const [selectedWorkshop, setSelectedWorkshop] = useState<number | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{ workshopId: number; workshopTitle: string; registrationId: number } | null>(null);
   const isAdmin = user?.role === "admin";
 
   // Fetch workshops
@@ -75,17 +78,39 @@ export default function WorkshopsPage() {
   // Handle successful workshop registration
   const handleRegisterSuccess = async (workshopId: number) => {
     try {
+      // Find the workshop to check if it's paid
+      const workshop = workshops?.find(w => w.id === workshopId);
+      
+      if (!workshop) {
+        throw new Error("Workshop not found");
+      }
+
+      // Create the registration
       const response = await apiRequest("POST", `/api/workshops/${workshopId}/register`, {});
       
-      if (response.ok) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to register for workshop");
+      }
+
+      const registration = await response.json();
+
+      // Check if workshop requires payment
+      if (workshop.isPaid && workshop.baseCost && workshop.baseCost > 0) {
+        // Show payment dialog
+        setPendingPayment({
+          workshopId: workshop.id,
+          workshopTitle: workshop.title,
+          registrationId: registration.id,
+        });
+        setPaymentDialogOpen(true);
+      } else {
+        // Free workshop - registration complete
         toast({
           title: "Registration Successful",
           description: "You have been registered for the workshop",
         });
         handleRegistrationSuccess();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to register for workshop");
       }
     } catch (error) {
       toast({
@@ -94,6 +119,16 @@ export default function WorkshopsPage() {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle payment success
+  const handlePaymentSuccess = () => {
+    toast({
+      title: "Payment Complete",
+      description: "Your workshop registration is confirmed!",
+    });
+    handleRegistrationSuccess();
+    setPendingPayment(null);
   };
 
   // Handle workshop edit
@@ -381,6 +416,18 @@ export default function WorkshopsPage() {
             onWorkshopUpdated={handleWorkshopUpdated}
           />
         </>
+      )}
+
+      {/* Payment Dialog */}
+      {pendingPayment && (
+        <PaymentCheckoutDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          workshopId={pendingPayment.workshopId}
+          workshopTitle={pendingPayment.workshopTitle}
+          registrationId={pendingPayment.registrationId}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );
