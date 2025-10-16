@@ -111,10 +111,10 @@ export function AdminDashboard() {
                   {displayStats.activeMembers} Active ({activePercentage}%)
                 </div>
               </div>
-              <Button asChild className="w-full bg-sky-700 hover:bg-sky-800 dark:bg-sky-700 dark:hover:bg-sky-800">
-                <Link href="/member-statistics">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  View Member Statistics
+              <Button asChild className="w-full bg-sky-700 hover:bg-sky-800 dark:bg-sky-700 dark:hover:bg-sky-800 text-sm py-2 h-auto">
+                <Link href="/member-statistics" className="flex items-center justify-center gap-2">
+                  <BarChart3 className="h-4 w-4 flex-shrink-0" />
+                  <span className="leading-tight">View Statistics</span>
                 </Link>
               </Button>
             </CardContent>
@@ -142,10 +142,10 @@ export function AdminDashboard() {
                   Full Database
                 </div>
               </div>
-              <Button asChild className="w-full bg-amber-700 hover:bg-amber-800 dark:bg-amber-700 dark:hover:bg-amber-800">
-                <Link href="/admin/members">
-                  <Users className="h-4 w-4 mr-2" />
-                  View All Members
+              <Button asChild className="w-full bg-amber-700 hover:bg-amber-800 dark:bg-amber-700 dark:hover:bg-amber-800 text-sm py-2 h-auto">
+                <Link href="/admin/members" className="flex items-center justify-center gap-2">
+                  <Users className="h-4 w-4 flex-shrink-0" />
+                  <span className="leading-tight">View Members</span>
                 </Link>
               </Button>
             </CardContent>
@@ -173,10 +173,10 @@ export function AdminDashboard() {
                   Management Tools
                 </div>
               </div>
-              <Button asChild className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800">
-                <Link href="/workshops">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Manage Workshops
+              <Button asChild className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-sm py-2 h-auto">
+                <Link href="/workshops" className="flex items-center justify-center gap-2">
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
+                  <span className="leading-tight">Manage Workshops</span>
                 </Link>
               </Button>
             </CardContent>
@@ -204,10 +204,10 @@ export function AdminDashboard() {
                   Bot Management
                 </div>
               </div>
-              <Button asChild className="w-full bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-800">
-                <Link href="/admin/discord">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Manage Discord Server
+              <Button asChild className="w-full bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-800 text-sm py-2 h-auto">
+                <Link href="/admin/discord" className="flex items-center justify-center gap-2">
+                  <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                  <span className="leading-tight">Manage Discord</span>
                 </Link>
               </Button>
             </CardContent>
