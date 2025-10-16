@@ -3059,6 +3059,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "This workshop is free" });
       }
 
+      // Check if invoice already exists for this registration
+      const [existingInvoice] = await db.select()
+        .from(invoices)
+        .where(eq(invoices.workshopRegistrationId, registrationId));
+
+      let invoice = existingInvoice;
+      let invoiceNumber = existingInvoice?.invoiceNumber;
+
       // For Stripe card payments
       if (paymentMethod === "stripe_card") {
         // Create payment intent
@@ -3086,21 +3094,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .returning();
 
-        // Create invoice
-        const invoiceNumber = PaymentService.generateInvoiceNumber();
-        const [invoice] = await db.insert(invoices)
-          .values({
-            workshopRegistrationId: registrationId,
-            invoiceNumber,
-            subtotalCad: pricing.subtotal,
-            taxCad: pricing.taxAmount,
-            totalCad: pricing.total,
-            taxRate: pricing.taxRate,
-            taxType: pricing.taxType,
-            status: "draft",
-            issuedAt: new Date(),
-          })
-          .returning();
+        // Create invoice only if it doesn't exist
+        if (!invoice) {
+          invoiceNumber = PaymentService.generateInvoiceNumber();
+          [invoice] = await db.insert(invoices)
+            .values({
+              workshopRegistrationId: registrationId,
+              invoiceNumber,
+              subtotalCad: pricing.subtotal,
+              taxCad: pricing.taxAmount,
+              totalCad: pricing.total,
+              taxRate: pricing.taxRate,
+              taxType: pricing.taxType,
+              status: "draft",
+              issuedAt: new Date(),
+            })
+            .returning();
+        }
 
         // Update registration status
         await db.update(workshopRegistrations)
@@ -3141,21 +3151,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .returning();
 
-        // Create invoice
-        const invoiceNumber = PaymentService.generateInvoiceNumber();
-        const [invoice] = await db.insert(invoices)
-          .values({
-            workshopRegistrationId: registrationId,
-            invoiceNumber,
-            subtotalCad: pricing.subtotal,
-            taxCad: pricing.taxAmount,
-            totalCad: pricing.total,
-            taxRate: pricing.taxRate,
-            taxType: pricing.taxType,
-            status: "sent",
-            issuedAt: new Date(),
-          })
-          .returning();
+        // Create invoice only if it doesn't exist
+        if (!invoice) {
+          invoiceNumber = PaymentService.generateInvoiceNumber();
+          [invoice] = await db.insert(invoices)
+            .values({
+              workshopRegistrationId: registrationId,
+              invoiceNumber,
+              subtotalCad: pricing.subtotal,
+              taxCad: pricing.taxAmount,
+              totalCad: pricing.total,
+              taxRate: pricing.taxRate,
+              taxType: pricing.taxType,
+              status: "sent",
+              issuedAt: new Date(),
+            })
+            .returning();
+        }
 
         // Update registration status
         await db.update(workshopRegistrations)
