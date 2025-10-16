@@ -8,6 +8,7 @@ import { BarChart3, Calendar, AlertTriangle, MessageSquare, Users } from 'lucide
 import { apiRequest } from '@/lib/queryClient';
 import { EnhancedCalendar } from '@/components/ui/enhanced-calendar';
 import { DiscordManagement } from './discord-management';
+import { MembershipPricingManagement } from './membership-pricing-management';
 
 interface DashboardStats {
   totalMembers: number;
@@ -215,6 +216,17 @@ export function AdminDashboard() {
       </div>
 
       {/* Error Display - Removed since statistics load properly with fallback */}
+
+      {/* Membership Pricing Management Section */}
+      <div className="mt-8">
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">Membership Pricing Rules</h2>
+          <p className="text-muted-foreground font-medium">
+            Configure workshop pricing percentages for different membership levels
+          </p>
+        </div>
+        <MembershipPricingManagement />
+      </div>
 
       {/* Discord Management Section */}
       <div className="mt-8">

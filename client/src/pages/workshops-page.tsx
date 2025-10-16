@@ -290,11 +290,21 @@ interface WorkshopCardProps {
   isAdmin?: boolean;
 }
 
+interface MembershipPricingRule {
+  id: number;
+  membershipLevel: string;
+  percentagePaid: number;
+}
+
 function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardProps) {
   const [isRegistering, setIsRegistering] = useState(false);
   const { data: committees = [] } = useQuery<any[]>({
     queryKey: ["/api/committees"],
   });
+  const { data: pricingRules = [] } = useQuery<MembershipPricingRule[]>({
+    queryKey: ["/api/membership-pricing-rules"],
+  });
+  const { user } = useAuth();
 
   const handleRegisterClick = async () => {
     setIsRegistering(true);
@@ -306,6 +316,33 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
   };
 
   const committee = committees.find(c => c.id === workshop.committeeId);
+
+  // Calculate the price for the current user based on their membership level
+  const calculatePrice = (): string | null => {
+    if (!workshop.baseCost || isAdmin || !user?.memberLevel) {
+      return null;
+    }
+
+    const pricingRule = pricingRules.find(
+      rule => rule.membershipLevel === user.memberLevel
+    );
+
+    if (!pricingRule) {
+      return null;
+    }
+
+    // baseCost is in cents, convert to dollars
+    const baseCostDollars = workshop.baseCost / 100;
+    // Apply membership percentage
+    const memberPrice = baseCostDollars * (pricingRule.percentagePaid / 100);
+    // Apply global discount if any
+    const globalDiscount = workshop.globalDiscountPercentage || 0;
+    const finalPrice = memberPrice * (1 - globalDiscount / 100);
+
+    return finalPrice.toFixed(2);
+  };
+
+  const userPrice = calculatePrice();
 
   return (
     <Card className="h-full flex flex-col">
@@ -347,6 +384,24 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
           <Users className="h-4 w-4 mr-2 text-muted-foreground" />
           <span className="text-sm">Capacity: {workshop.capacity} attendees</span>
         </div>
+        {userPrice && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Your Price:</span>
+              <span className="text-2xl font-bold text-primary">${userPrice}</span>
+            </div>
+            {workshop.sponsoredBy && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Sponsored by {workshop.sponsoredBy}
+              </p>
+            )}
+            {workshop.globalDiscountPercentage && workshop.globalDiscountPercentage > 0 && (
+              <p className="text-xs text-green-600 mt-1">
+                Includes {workshop.globalDiscountPercentage}% sponsorship discount
+              </p>
+            )}
+          </div>
+        )}
       </CardContent>
       <CardFooter>
         {isAdmin ? (
