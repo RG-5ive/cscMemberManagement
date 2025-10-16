@@ -202,6 +202,7 @@ export default function WorkshopsPage() {
                             <TableHead>Committee</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Capacity</TableHead>
+                            <TableHead>Price</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
@@ -230,6 +231,25 @@ export default function WorkshopsPage() {
                                 </TableCell>
                                 <TableCell>{workshop.isOnline ? "Online" : workshop.locationAddress || "TBA"}</TableCell>
                                 <TableCell>{workshop.capacity}</TableCell>
+                                <TableCell>
+                                  {workshop.baseCost !== null && workshop.baseCost !== undefined ? (
+                                    <div>
+                                      <div className="font-medium">${(workshop.baseCost / 100).toFixed(2)}</div>
+                                      {workshop.globalDiscountPercentage && workshop.globalDiscountPercentage > 0 && (
+                                        <div className="text-xs text-green-600">
+                                          {workshop.globalDiscountPercentage}% discount
+                                        </div>
+                                      )}
+                                      {workshop.sponsoredBy && (
+                                        <div className="text-xs text-muted-foreground">
+                                          by {workshop.sponsoredBy}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Free</span>
+                                  )}
+                                </TableCell>
                                 <TableCell>
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     new Date(workshop.date) > new Date() 
