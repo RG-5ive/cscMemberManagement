@@ -67,6 +67,11 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
     queryKey: ["/api/workshops"],
   });
 
+  // Fetch committees for displaying committee names
+  const { data: committees = [] } = useQuery<any[]>({
+    queryKey: ["/api/committees"],
+  });
+
   // Transform database events to calendar format
   const events: LocalCalendarEvent[] = [
     // Calendar events from database
@@ -77,20 +82,35 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
       attendees: event.attendees || []
     })) : []),
     // Workshop events
-    ...(Array.isArray(workshops) ? workshops.map((workshop: any) => ({
-      id: `workshop-${workshop.id}`,
-      title: workshop.title,
-      description: workshop.description || '',
-      date: new Date(workshop.date),
-      time: format(new Date(workshop.date), 'HH:mm'),
-      location: workshop.locationAddress || workshop.locationDetails || 'TBD',
-      type: 'workshop' as const,
-      attendees: [`Capacity: ${workshop.capacity || 'Unlimited'}`],
-      createdBy: 0, // System created
-      visibleToGeneralMembers: true,
-      visibleToCommitteeChairs: true,
-      visibleToAdmins: true
-    })) : [])
+    ...(Array.isArray(workshops) ? workshops.map((workshop: any) => {
+      const committee = committees.find(c => c.id === workshop.committeeId);
+      const timeDisplay = workshop.startTime && workshop.endTime 
+        ? `${workshop.startTime} - ${workshop.endTime}` 
+        : format(new Date(workshop.date), 'HH:mm');
+      
+      const attendeeInfo = [];
+      if (workshop.capacity) {
+        attendeeInfo.push(`Capacity: ${workshop.capacity}`);
+      }
+      if (committee) {
+        attendeeInfo.push(`Committee: ${committee.name}`);
+      }
+
+      return {
+        id: `workshop-${workshop.id}`,
+        title: workshop.title,
+        description: workshop.description || '',
+        date: new Date(workshop.date),
+        time: timeDisplay,
+        location: workshop.locationAddress || workshop.locationDetails || 'TBD',
+        type: 'workshop' as const,
+        attendees: attendeeInfo,
+        createdBy: 0, // System created
+        visibleToGeneralMembers: true,
+        visibleToCommitteeChairs: true,
+        visibleToAdmins: true
+      };
+    }) : [])
   ];
 
   const monthStart = startOfMonth(currentDate);
