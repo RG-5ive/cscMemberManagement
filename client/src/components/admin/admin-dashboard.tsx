@@ -90,11 +90,11 @@ export function AdminDashboard() {
       {/* Quick Access Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Member Statistics Card */}
-        <div className="border-4 border-blue-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
+        <div className="border-4 border-sky-200 dark:border-sky-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
           <Card className="border-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <BarChart3 className="h-6 w-6 text-blue-600" />
+                <BarChart3 className="h-6 w-6 text-sky-500 dark:text-sky-400" />
                 Member Statistics
               </CardTitle>
               <CardDescription className="font-medium">
@@ -103,14 +103,14 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
                   {displayStats.totalMembers} Members
                 </div>
                 <div className="text-sm text-muted-foreground font-medium">
                   {displayStats.activeMembers} Active ({activePercentage}%)
                 </div>
               </div>
-              <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="w-full bg-sky-400 hover:bg-sky-500 dark:bg-sky-600 dark:hover:bg-sky-700">
                 <Link href="/member-statistics">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   View Member Statistics
@@ -121,11 +121,11 @@ export function AdminDashboard() {
         </div>
 
         {/* View All Members Card */}
-        <div className="border-4 border-orange-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
+        <div className="border-4 border-amber-200 dark:border-amber-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
           <Card className="border-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <Users className="h-6 w-6 text-orange-600" />
+                <Users className="h-6 w-6 text-amber-500 dark:text-amber-400" />
                 View All Members
               </CardTitle>
               <CardDescription className="font-medium">
@@ -134,14 +134,14 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                   {displayStats.totalMembers} Records
                 </div>
                 <div className="text-sm text-muted-foreground font-medium">
                   Full Database
                 </div>
               </div>
-              <Button asChild className="w-full bg-orange-600 hover:bg-orange-700">
+              <Button asChild className="w-full bg-amber-400 hover:bg-amber-500 dark:bg-amber-600 dark:hover:bg-amber-700">
                 <Link href="/admin/members">
                   <Users className="h-4 w-4 mr-2" />
                   View All Members
@@ -152,11 +152,11 @@ export function AdminDashboard() {
         </div>
 
         {/* Workshop Management Card */}
-        <div className="border-4 border-green-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
+        <div className="border-4 border-emerald-200 dark:border-emerald-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
           <Card className="border-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <Calendar className="h-6 w-6 text-green-600" />
+                <Calendar className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
                 Workshop Management
               </CardTitle>
               <CardDescription className="font-medium">
@@ -165,14 +165,14 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {workshops?.length || 1} Workshops
                 </div>
                 <div className="text-sm text-muted-foreground font-medium">
                   Management Tools
                 </div>
               </div>
-              <Button asChild className="w-full bg-green-600 hover:bg-green-700">
+              <Button asChild className="w-full bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-700">
                 <Link href="/workshops">
                   <Calendar className="h-4 w-4 mr-2" />
                   Manage Workshops
@@ -183,11 +183,11 @@ export function AdminDashboard() {
         </div>
 
         {/* Discord Management Card */}
-        <div className="border-4 border-purple-500 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
+        <div className="border-4 border-violet-200 dark:border-violet-800 rounded-lg bg-card shadow-lg hover:shadow-xl transition-shadow">
           <Card className="border-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-3 text-xl">
-                <MessageSquare className="h-6 w-6 text-purple-600" />
+                <MessageSquare className="h-6 w-6 text-violet-500 dark:text-violet-400" />
                 Discord Management
               </CardTitle>
               <CardDescription className="font-medium">
@@ -196,14 +196,14 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                   Community Hub
                 </div>
                 <div className="text-sm text-muted-foreground font-medium">
                   Bot Management
                 </div>
               </div>
-              <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button asChild className="w-full bg-violet-400 hover:bg-violet-500 dark:bg-violet-600 dark:hover:bg-violet-700">
                 <Link href="/admin/discord">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Manage Discord Server
