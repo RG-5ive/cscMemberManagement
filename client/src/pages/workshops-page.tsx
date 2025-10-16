@@ -416,22 +416,24 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
           <Users className="h-4 w-4 mr-2 text-muted-foreground" />
           <span className="text-sm">Capacity: {workshop.capacity} attendees</span>
         </div>
+        {workshop.sponsoredBy && (
+          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              🎉 Sponsored by {workshop.sponsoredBy}
+            </p>
+            {workshop.globalDiscountPercentage && workshop.globalDiscountPercentage > 0 && (
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                Includes {workshop.globalDiscountPercentage}% discount for all members
+              </p>
+            )}
+          </div>
+        )}
         {userPrice && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-muted-foreground">Your Price:</span>
               <span className="text-2xl font-bold text-primary">${userPrice}</span>
             </div>
-            {workshop.sponsoredBy && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Sponsored by {workshop.sponsoredBy}
-              </p>
-            )}
-            {workshop.globalDiscountPercentage && workshop.globalDiscountPercentage > 0 && (
-              <p className="text-xs text-green-600 mt-1">
-                Includes {workshop.globalDiscountPercentage}% sponsorship discount
-              </p>
-            )}
           </div>
         )}
       </CardContent>
