@@ -1130,7 +1130,7 @@ export default function MemberStatisticsPage() {
             {totalSelections > 0 && (
               <div className="mb-4 p-3 bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800 rounded-lg">
                 <p className="text-sm text-cyan-700 dark:text-cyan-300">
-                  📊 <strong>{totalSelections}</strong> demographic{totalSelections !== 1 ? 's' : ''} selected for comparison
+                  <strong>{totalSelections}</strong> demographic{totalSelections !== 1 ? 's' : ''} selected for comparison
                 </p>
               </div>
             )}
