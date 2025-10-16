@@ -29,8 +29,19 @@ import { log } from "./vite";
 import { db } from "./db";
 import { eq, or, and, ilike, desc, count, inArray, sql, ne, isNull, not } from "drizzle-orm";
 import { getDiscordBot } from "./discord-bot";
+import Stripe from "stripe";
+import { PaymentService } from "./payment-service";
+import { payments, invoices, auditLogs } from "@shared/schema";
 
 // Note: Auth functions already imported above
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('Warning: STRIPE_SECRET_KEY not found. Payment features will be disabled.');
+}
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" })
+  : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -2942,6 +2953,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(updatedRegistration);
     } catch (error) {
       console.error("Error approving workshop payment:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Payment Routes
+  // Calculate workshop pricing for current user
+  app.get("/api/workshops/:id/pricing", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const workshopId = parseInt(req.params.id);
+      if (isNaN(workshopId)) {
+        return res.status(400).json({ error: "Invalid workshop ID" });
+      }
+
+      const [workshop] = await db.select()
+        .from(workshops)
+        .where(eq(workshops.id, workshopId));
+
+      if (!workshop) {
+        return res.status(404).json({ error: "Workshop not found" });
+      }
+
+      // Get member info for province (tax calculation)
+      let memberProvince = null;
+      if (req.user.email) {
+        const [member] = await db.select()
+          .from(members)
+          .where(eq(members.email, req.user.email));
+        memberProvince = member?.provinceTerritory || null;
+      }
+
+      const pricing = await PaymentService.calculateWorkshopPrice(
+        workshop,
+        req.user,
+        memberProvince
+      );
+
+      res.json(pricing);
+    } catch (error) {
+      console.error("Error calculating workshop pricing:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Create payment intent for workshop registration
+  app.post("/api/payments/create-intent", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      if (!stripe) {
+        return res.status(500).json({ error: "Payment system not configured" });
+      }
+
+      const { registrationId, paymentMethod } = req.body;
+
+      if (!registrationId || !paymentMethod) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get registration and workshop
+      const [registration] = await db.select()
+        .from(workshopRegistrations)
+        .where(eq(workshopRegistrations.id, registrationId));
+
+      if (!registration) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+
+      if (registration.userId !== req.user.id) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const [workshop] = await db.select()
+        .from(workshops)
+        .where(eq(workshops.id, registration.workshopId!));
+
+      if (!workshop) {
+        return res.status(404).json({ error: "Workshop not found" });
+      }
+
+      // Get member info for province (tax calculation)
+      let memberProvince = null;
+      if (req.user.email) {
+        const [member] = await db.select()
+          .from(members)
+          .where(eq(members.email, req.user.email));
+        memberProvince = member?.provinceTerritory || null;
+      }
+
+      // Calculate pricing
+      const pricing = await PaymentService.calculateWorkshopPrice(
+        workshop,
+        req.user,
+        memberProvince
+      );
+
+      if (pricing.total === 0) {
+        return res.status(400).json({ error: "This workshop is free" });
+      }
+
+      // For Stripe card payments
+      if (paymentMethod === "stripe_card") {
+        // Create payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: pricing.total, // Already in cents
+          currency: "cad",
+          metadata: {
+            registrationId: registrationId.toString(),
+            workshopId: workshop.id.toString(),
+            userId: req.user.id.toString(),
+            workshopTitle: workshop.title,
+          },
+        });
+
+        // Create payment record
+        const [payment] = await db.insert(payments)
+          .values({
+            workshopRegistrationId: registrationId,
+            method: "stripe_card",
+            amountCad: pricing.total,
+            currency: "CAD",
+            stripePaymentIntentId: paymentIntent.id,
+            status: "initiated",
+            metadata: { pricing },
+          })
+          .returning();
+
+        // Create invoice
+        const invoiceNumber = PaymentService.generateInvoiceNumber();
+        const [invoice] = await db.insert(invoices)
+          .values({
+            workshopRegistrationId: registrationId,
+            invoiceNumber,
+            subtotalCad: pricing.subtotal,
+            taxCad: pricing.taxAmount,
+            totalCad: pricing.total,
+            taxRate: pricing.taxRate,
+            taxType: pricing.taxType,
+            status: "draft",
+            issuedAt: new Date(),
+          })
+          .returning();
+
+        // Update registration status
+        await db.update(workshopRegistrations)
+          .set({ paymentStatus: "pending" })
+          .where(eq(workshopRegistrations.id, registrationId));
+
+        // Log audit trail
+        await db.insert(auditLogs)
+          .values({
+            actorUserId: req.user.id,
+            entityType: "payment",
+            entityId: payment.id,
+            action: "payment_initiated",
+            after: { paymentId: payment.id, invoiceId: invoice.id, method: paymentMethod },
+            ipAddress: req.ip,
+          });
+
+        res.json({
+          clientSecret: paymentIntent.client_secret,
+          paymentId: payment.id,
+          invoiceNumber,
+        });
+      } else if (paymentMethod === "interac_transfer" || paymentMethod === "bank_transfer") {
+        // For e-Transfer/bank transfer, create pending payment
+        const [payment] = await db.insert(payments)
+          .values({
+            workshopRegistrationId: registrationId,
+            method: paymentMethod,
+            amountCad: pricing.total,
+            currency: "CAD",
+            status: "pending_settlement",
+            metadata: { 
+              pricing,
+              instructions: paymentMethod === "interac_transfer" 
+                ? "Send e-Transfer to payments@csc.ca with invoice number in message"
+                : "Contact admin for bank transfer details"
+            },
+          })
+          .returning();
+
+        // Create invoice
+        const invoiceNumber = PaymentService.generateInvoiceNumber();
+        const [invoice] = await db.insert(invoices)
+          .values({
+            workshopRegistrationId: registrationId,
+            invoiceNumber,
+            subtotalCad: pricing.subtotal,
+            taxCad: pricing.taxAmount,
+            totalCad: pricing.total,
+            taxRate: pricing.taxRate,
+            taxType: pricing.taxType,
+            status: "sent",
+            issuedAt: new Date(),
+          })
+          .returning();
+
+        // Update registration status
+        await db.update(workshopRegistrations)
+          .set({ paymentStatus: "pending" })
+          .where(eq(workshopRegistrations.id, registrationId));
+
+        // Log audit trail
+        await db.insert(auditLogs)
+          .values({
+            actorUserId: req.user.id,
+            entityType: "payment",
+            entityId: payment.id,
+            action: "payment_initiated",
+            after: { paymentId: payment.id, invoiceId: invoice.id, method: paymentMethod },
+            ipAddress: req.ip,
+          });
+
+        res.json({
+          paymentId: payment.id,
+          invoiceNumber,
+          instructions: payment.metadata,
+          totalCad: pricing.total,
+        });
+      } else {
+        res.status(400).json({ error: "Invalid payment method" });
+      }
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
       res.status(500).json({ error: (error as Error).message });
     }
   });
