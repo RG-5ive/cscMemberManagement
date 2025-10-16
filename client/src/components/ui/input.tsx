@@ -63,7 +63,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         const value = e.target.value;
         requestAnimationFrame(() => {
           if (combinedRef.current && !selectionWasMade.current) {
-            combinedRef.current.setSelectionRange(value.length, value.length);
+            // Only use setSelectionRange for text-like inputs
+            // Time, date, number, etc. don't support selection
+            const textLikeTypes = ['text', 'password', 'search', 'url', 'tel', 'email'];
+            const inputType = combinedRef.current.type || 'text';
+            if (textLikeTypes.includes(inputType)) {
+              combinedRef.current.setSelectionRange(value.length, value.length);
+            }
           }
         });
       }
