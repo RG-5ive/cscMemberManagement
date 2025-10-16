@@ -171,13 +171,22 @@ export default function WorkshopsPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Workshops & Events</h1>
         </div>
-        {isAdmin && (
+        {isAdmin ? (
           <div className="mt-4 inline-block border-4 border-[#7dd3d3] rounded-lg p-1 bg-white">
             <Button asChild variant="outline" className="rounded-lg border-0">
               <Link href="/workshop-pricing">
                 Workshop Pricing Rules
               </Link>
             </Button>
+          </div>
+        ) : user?.memberLevel && (
+          <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <p className="text-sm">
+              🎉 As a <strong>{user.memberLevel}</strong>, you enjoy exclusive member pricing on all workshops.{" "}
+              <Link href="/pricing" className="text-primary font-medium hover:underline">
+                View your pricing benefits →
+              </Link>
+            </p>
           </div>
         )}
       </div>
@@ -468,7 +477,7 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
   const committee = committees.find(c => c.id === workshop.committeeId);
 
   // Calculate the price for the current user based on their membership level
-  const calculatePrice = (): string | null => {
+  const calculatePrice = (): { finalPrice: string; baseCost: string; membershipDiscount: number; pricingRule: MembershipPricingRule | null } | null => {
     if (!workshop.baseCost || isAdmin || !user?.memberLevel) {
       return null;
     }
@@ -489,15 +498,27 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
     const globalDiscount = workshop.globalDiscountPercentage || 0;
     const finalPrice = memberPrice * (1 - globalDiscount / 100);
 
-    return finalPrice.toFixed(2);
+    return {
+      finalPrice: finalPrice.toFixed(2),
+      baseCost: baseCostDollars.toFixed(2),
+      membershipDiscount: 100 - pricingRule.percentagePaid,
+      pricingRule
+    };
   };
 
-  const userPrice = calculatePrice();
+  const priceInfo = calculatePrice();
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col relative">
+      {!workshop.baseCost || workshop.baseCost === 0 ? (
+        <div className="absolute top-4 right-4 z-10">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-lg">
+            FREE
+          </span>
+        </div>
+      ) : null}
       <CardHeader>
-        <CardTitle className="line-clamp-2">{workshop.title}</CardTitle>
+        <CardTitle className="line-clamp-2 pr-16">{workshop.title}</CardTitle>
         <CardDescription>
           <div className="flex items-center mt-1">
             <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -541,14 +562,41 @@ function WorkshopCard({ workshop, onRegister, onEdit, isAdmin }: WorkshopCardPro
             </p>
           </div>
         )}
-        {userPrice && (
+        {priceInfo ? (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Your Price:</span>
+                {priceInfo.membershipDiscount > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                    {priceInfo.membershipDiscount}% OFF
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <div>
+                {priceInfo.membershipDiscount > 0 && (
+                  <span className="text-sm line-through text-muted-foreground mr-2">
+                    ${priceInfo.baseCost}
+                  </span>
+                )}
+                <span className="text-3xl font-bold text-primary">${priceInfo.finalPrice}</span>
+                <span className="text-sm text-muted-foreground ml-1">CAD</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {user?.memberLevel} pricing • <Link href="/pricing" className="text-primary hover:underline">View all tiers</Link>
+            </p>
+          </div>
+        ) : workshop.baseCost && workshop.baseCost > 0 ? (
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Your Price:</span>
-              <span className="text-2xl font-bold text-primary">${userPrice}</span>
+              <span className="text-sm font-medium text-muted-foreground">Base Price:</span>
+              <span className="text-2xl font-bold">${(workshop.baseCost / 100).toFixed(2)} CAD</span>
             </div>
           </div>
-        )}
+        ) : null}
       </CardContent>
       <CardFooter>
         {isAdmin ? (
