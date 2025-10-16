@@ -3647,14 +3647,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const workshopId = parseInt(req.params.id);
       
-      // Delete the registration
-      await db.delete(workshopRegistrations)
+      // Find the registration first
+      const [registration] = await db.select()
+        .from(workshopRegistrations)
         .where(
           and(
             eq(workshopRegistrations.workshopId, workshopId),
             eq(workshopRegistrations.userId, req.user.id)
           )
         );
+
+      if (!registration) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+
+      // Get payment IDs for audit log cleanup
+      const relatedPayments = await db.select({ id: payments.id })
+        .from(payments)
+        .where(eq(payments.workshopRegistrationId, registration.id));
+
+      // Delete related invoices first
+      await db.delete(invoices)
+        .where(eq(invoices.workshopRegistrationId, registration.id));
+
+      // Delete related payments
+      await db.delete(payments)
+        .where(eq(payments.workshopRegistrationId, registration.id));
+
+      // Delete related audit logs for these payments
+      if (relatedPayments.length > 0) {
+        await db.delete(auditLogs)
+          .where(
+            and(
+              eq(auditLogs.entityType, "payment"),
+              sql`${auditLogs.entityId} IN (${sql.join(relatedPayments.map(p => sql`${p.id}`), sql`, `)})`
+            )
+          );
+      }
+
+      // Finally delete the registration
+      await db.delete(workshopRegistrations)
+        .where(eq(workshopRegistrations.id, registration.id));
       
       res.status(200).json({ success: true });
     } catch (error) {
