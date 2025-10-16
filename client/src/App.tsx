@@ -22,6 +22,7 @@ import ChairLoginPage from "@/pages/chair-login";
 import AdminUsersPage from "@/pages/admin-users-page";
 import MemberStatisticsPage from "@/pages/member-statistics";
 import WorkshopPricingPage from "@/pages/workshop-pricing-page";
+import MembershipPricingPage from "@/pages/membership-pricing-page";
 import NotFound from "@/pages/not-found";
 
 // This component ensures cookies are sent with all requests and session is maintained
@@ -123,6 +124,7 @@ function Router() {
       <ProtectedRoute path="/onboarding" component={OnboardingPage} allowedRoles={["user"]} />
       <ProtectedRoute path="/messages" component={Dashboard} allowedRoles={["user"]} />
       <ProtectedRoute path="/workshops" component={WorkshopsPage} allowedRoles={["user", "admin"]} />
+      <ProtectedRoute path="/pricing" component={MembershipPricingPage} allowedRoles={["user", "admin"]} />
       <ProtectedRoute path="/events" component={Dashboard} allowedRoles={["user"]} />
       
       {/* Admin Portal Routes */}

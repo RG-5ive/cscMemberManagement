@@ -56,6 +56,14 @@ export function Navbar() {
                 </Link>
               </NavigationMenuItem>
 
+              <NavigationMenuItem>
+                <Link href="/pricing">
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Pricing
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+
               {user?.role === "admin" && (
                 <NavigationMenuItem>
                   <Link href="/surveys">
@@ -107,6 +115,9 @@ export function Navbar() {
                 )}
                 <DropdownMenuItem asChild>
                   <Link href="/workshops">Workshops</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/pricing">Pricing</Link>
                 </DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem asChild>

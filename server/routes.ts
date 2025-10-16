@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, requireAuth, hashPassword, comparePasswords, generateAuthToken } from "./auth";
 import { storage } from "./storage";
