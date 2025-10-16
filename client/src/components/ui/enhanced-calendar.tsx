@@ -106,9 +106,9 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
         type: 'workshop' as const,
         attendees: attendeeInfo,
         createdBy: 0, // System created
-        visibleToGeneralMembers: true,
-        visibleToCommitteeChairs: true,
-        visibleToAdmins: true
+        visibleToGeneralMembers: workshop.visibleToGeneralMembers ?? false,
+        visibleToCommitteeChairs: workshop.visibleToCommitteeChairs ?? true,
+        visibleToAdmins: workshop.visibleToAdmins ?? true
       };
     }) : [])
   ];
@@ -118,7 +118,25 @@ export function EnhancedCalendar({ readOnly = false }: CalendarProps) {
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => isSameDay(event.date, date));
+    return events.filter(event => {
+      if (!isSameDay(event.date, date)) return false;
+      
+      // Filter based on user role and event visibility
+      const userRole = user?.role;
+      
+      // Admins can see all events
+      if (userRole === 'admin') {
+        return event.visibleToAdmins !== false;
+      }
+      
+      // Committee chairs and co-chairs can see chair and member events
+      if (userRole === 'committee_chair' || userRole === 'committee_cochair') {
+        return event.visibleToCommitteeChairs || event.visibleToGeneralMembers;
+      }
+      
+      // Regular members can only see events visible to general members
+      return event.visibleToGeneralMembers === true;
+    });
   };
 
   const getEventColor = (type: string) => {
