@@ -60,9 +60,10 @@ if (!process.env.STRIPE_SECRET_KEY) {
     "Warning: STRIPE_SECRET_KEY not found. Payment features will be disabled."
   );
 }
+
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-04-30.basil",
+      apiVersion: "2025-08-27.basil" as Stripe.StripeConfig["apiVersion"],
     })
   : null;
 
