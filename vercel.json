@@ -2,29 +2,11 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  "functions": {
-    "dist/index.js": {
-      "runtime": "@vercel/node"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/dist/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/dist/index.js"
+      "destination": "https://YOUR-API-HOST.example.com/api/$1"
     },
-    {
-      "source": "/(.*)",
-      "destination": "/dist/public/index.html"
-    }
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }

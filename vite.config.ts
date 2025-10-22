@@ -8,6 +8,9 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// optional: customize local API target via env
+const API_TARGET = process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:5000";
+
 export default defineConfig({
   plugins: [
     react(),
@@ -17,7 +20,7 @@ export default defineConfig({
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
+            m.cartographer()
           ),
         ]
       : []),
@@ -29,6 +32,17 @@ export default defineConfig({
     },
   },
   root: path.resolve(__dirname, "client"),
+  // ✨ ADD THIS: dev proxy for relative /api calls
+  server: {
+    proxy: {
+      "/api": {
+        target: API_TARGET, // e.g. your local Express: http://127.0.0.1:5000
+        changeOrigin: true,
+        // if your backend sets cookies and you want them in dev:
+        // secure: false,
+      },
+    },
+  },
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
